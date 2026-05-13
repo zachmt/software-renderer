@@ -1,5 +1,5 @@
 compile_commands.json
-game
-wayland/
-wayland_source_files.h
+out/
+src/wayland/
+src/wayland_source_files.h
 .cache/

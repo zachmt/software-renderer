@@ -10,8 +10,8 @@ wayland_protocols=(
 	"staging/pointer-warp/pointer-warp-v1"
 )
 
-wayland_source_destination="./wayland/src"
-wayland_header_destination="./wayland/include"
+wayland_source_destination="./src/wayland/src"
+wayland_header_destination="./src/wayland/include"
 mkdir -p $wayland_source_destination $wayland_header_destination
 
 for protocol in ${wayland_protocols[@]}; do
@@ -22,12 +22,15 @@ for protocol in ${wayland_protocols[@]}; do
 	wayland-scanner client-header "$xml_path" "$header_path"
 done
 
-printf "#pragma once\n" > ./wayland_source_files.h
+printf "#pragma once\n" > ./src/wayland_source_files.h
 for file in "$wayland_source_destination"/*.c; do
-	printf "#include \"%s\"\n" "$file" >> ./wayland_source_files.h
+	printf "#include \"%s\"\n" "$(basename $file)" >> ./src/wayland_source_files.h
 done
 
-cflags="-Wall -Wextra -Wpedantic -Wconversion -Woverflow"
-includes="-I$wayland_header_destination"
+build_destination='./out'
+mkdir -p "$build_destination"
+# cflags="-Wall -Wextra -Wpedantic -Wconversion -Woverflow"
+cflags=""
+includes="-I$wayland_header_destination -I$wayland_source_destination"
 libs="-D RGFW_WAYLAND -lwayland-cursor -lwayland-client -lxkbcommon  -lwayland-egl -lEGL -lm"
-gcc $cflags $includes main.c -o game $libs
+gcc $cflags $includes src/main.c -o "${build_destination%/}/game" $libs
