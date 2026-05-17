@@ -1,4 +1,9 @@
 #include "render.h"
+#include "model.h"
+
+#include <assert.h>
+#include <stdlib.h>
+#include <math.h>
 
 static ColorRGBA red = {.r = 255, .g = 0, .b = 0, .a = 255};
 static ColorRGBA green = {.r = 0, .g = 255, .b = 0, .a = 255};
@@ -33,7 +38,7 @@ static void drawLine(u8 *frame_buffer, i32 width, i32 height, i32 ax, i32 ay, i3
         drawPixel(frame_buffer, width, height, x, y, color);
     }
 #else
-    bool steep = abs(ax-bx) < abs(ay-by);
+    bool32 steep = abs(ax-bx) < abs(ay-by);
     if (steep) {
         SWAP(i32, ax, ay);
         SWAP(i32, bx, by);
@@ -54,16 +59,18 @@ static void drawLine(u8 *frame_buffer, i32 width, i32 height, i32 ax, i32 ay, i3
 #endif
 }
 
-void render(u8 *frame_buffer, u32 frame_buffer_len, i32 width, i32 height, GameState *state) {
+void UpdateAndRender(u8 *frame_buffer, u32 frame_buffer_len, i32 width, i32 height, GameState *state) {
     (void)state;
+
     assert(width * height * 4 <= frame_buffer_len);
 
     clear(frame_buffer, frame_buffer_len, black);
-    drawPixel(frame_buffer, width, height, 7, 3, white);
-    drawPixel(frame_buffer, width, height, 12, 37, white);
-    drawPixel(frame_buffer, width, height, 62, 53, white);
 
     drawLine(frame_buffer, width, height, 7, 3, 62, 53, red);
     drawLine(frame_buffer, width, height, 7, 3, 12, 37, blue);
     drawLine(frame_buffer, width, height, 12, 37, 62, 53, green);
+
+    drawPixel(frame_buffer, width, height, 7, 3, white);
+    drawPixel(frame_buffer, width, height, 12, 37, white);
+    drawPixel(frame_buffer, width, height, 62, 53, white);
 }

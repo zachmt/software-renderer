@@ -1,12 +1,6 @@
 #pragma once
 
-#include <assert.h>
-#include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include <inttypes.h>
 
 typedef int8_t i8;
 typedef int16_t i16;
@@ -20,4 +14,24 @@ typedef float f32;
 typedef double f64;
 typedef uint32_t bool32;
 
+typedef int32_t ExitStatus;
+
 #define SWAP(type, x, y) do { type _temp_ = (x); (x) = (y); (y) = _temp_; } while(0)
+
+typedef struct {
+    f32 x;
+    f32 y;
+} Vec2;
+
+typedef struct {
+    f32 x;
+    f32 y;
+    f32 z;
+} Vec3;
+
+typedef struct {
+    f32 x;
+    f32 y;
+    f32 z;
+    f32 w;
+} Vec4;

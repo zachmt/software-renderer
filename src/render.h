@@ -1,9 +1,12 @@
 #pragma once
 
-#include "core.h"
+#include "core/core.h"
+#include "core/arena.h"
+#include "model.h"
 
 typedef struct {
-    bool iscool;
+    Arena *arena;
+    Mesh *mesh;
 } GameState;
 
 typedef union {
@@ -16,4 +19,4 @@ typedef union {
     u8 vals[4];
 } ColorRGBA;
 
-void render(u8 *frame_buffer, u32 frame_buffer_len, i32 width, i32 height, GameState *state);
+void UpdateAndRender(u8 *frame_buffer, u32 frame_buffer_len, i32 width, i32 height, GameState *state);
