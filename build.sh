@@ -40,8 +40,7 @@ done
 
 build_destination="out"
 mkdir -p "$build_destination"
-# cflags=(-g -Og -Wall -Wextra -Wpedantic -Wconversion -Woverflow)
-cflags=(-g -Og)
+cflags=(-g -Og -Wall -Wextra -Wpedantic -Wno-unused-parameter -Wno-unused-function)
 includes=(-Isrc -I"$wayland_header_destination" -I"$wayland_source_destination")
 libs=(-D RGFW_WAYLAND -lwayland-cursor -lwayland-client -lxkbcommon  -lwayland-egl -lEGL -lm)
 gcc "${cflags[@]}" "${includes[@]}" src/main.c -o "$(joinpath "$build_destination" "game")" "${libs[@]}"

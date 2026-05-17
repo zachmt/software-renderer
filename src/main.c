@@ -4,13 +4,8 @@
 
 #include "core/core.h"
 #include "core/arena.h"
-
-#include "os/linux/wayland/wayland_source_files.h"
-#include "os/linux/os_core.c"
-#include "render.c"
-#include "model.c"
-#include "core/core.c"
-#include "core/arena.c"
+#include "model.h"
+#include "render.h"
 
 int main(void) {
     const i32 window_width = 500;
@@ -24,7 +19,7 @@ int main(void) {
 
     GameState state = {0};
     state.arena = ArenaInit();
-    state.mesh = meshFromObj(state.arena, "res/model.obj");
+    state.mesh = mesh_from_obj(state.arena, "res/model.obj");
 
     while (RGFW_window_shouldClose(window) == RGFW_FALSE) {
         RGFW_pollEvents();
@@ -37,7 +32,17 @@ int main(void) {
         RGFW_window_blitSurface(window, surface);
     }
 
+    ArenaDestroy(state.arena);
+
     RGFW_surface_free(surface);
     free(frame_buffer);
     RGFW_window_close(window);
 }
+
+#include "os/linux/wayland/wayland_source_files.h"
+#include "os/linux/os_core.c"
+#include "render.c"
+#include "model.c"
+#include "core/core.c"
+#include "core/arena.c"
+

@@ -29,9 +29,12 @@ typedef struct {
     f32 z;
 } Vec3;
 
-typedef struct {
-    f32 x;
-    f32 y;
-    f32 z;
-    f32 w;
+typedef union{
+    struct {
+        f32 x;
+        f32 y;
+        f32 z;
+        f32 w;
+    };
+    f32 vals[4];
 } Vec4;
