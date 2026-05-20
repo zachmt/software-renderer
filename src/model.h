@@ -26,6 +26,6 @@ typedef struct {
 
     Face *faces;
     u32 face_count;
-} Mesh;
+} Model;
 
-Mesh *mesh_from_obj(Arena *arena, char *file_path);
+Model *mesh_from_obj(Arena *arena, char *file_path);

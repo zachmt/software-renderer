@@ -9,8 +9,8 @@ typedef struct {
     u64 committed;
 } Arena;
 
-Arena *ArenaInit(void);
-u8 *ArenaPush(Arena *arena, u32 size);
-void ArenaShrink(Arena *arena, u32 size);
-void ArenaClear(Arena *arena);
-void ArenaDestroy(Arena *arena);
+Arena *arena_init(void);
+u8 *arena_push(Arena *arena, u32 size);
+void arena_shrink(Arena *arena, u32 size);
+void arena_clear(Arena *arena);
+void arena_destroy(Arena *arena);

@@ -13,7 +13,7 @@ static u64 round_up(u64 x, u64 multiple) {
     return (remainder == 0) ? x : x + multiple - remainder;
 }
 
-Arena *ArenaInit(void) {
+Arena *arena_init(void) {
     const u64 reservation_size = 1024ULL * 1024ULL * 1024ULL * 64ULL;
     u8 *base = (u8 *)os_mem_reserve(reservation_size);
     os_mem_commit(base, sizeof(Arena));
@@ -26,7 +26,7 @@ Arena *ArenaInit(void) {
     return arena;
 }
 
-u8 *ArenaPush(Arena *arena, u32 size) {
+u8 *arena_push(Arena *arena, u32 size) {
     assert(arena->size + size < arena->capacity);
     if (arena->size + size > arena->committed) {
         u8 *base = (u8 *)round_down((u64)(arena->buffer + arena->committed), os_get_pagesize());
@@ -39,7 +39,7 @@ u8 *ArenaPush(Arena *arena, u32 size) {
     return res;
 }
 
-void ArenaShrink(Arena *arena, u32 size) {
+void arena_shrink(Arena *arena, u32 size) {
     if (size > arena->size) {
         arena->size = 0;
     } else {
@@ -47,10 +47,10 @@ void ArenaShrink(Arena *arena, u32 size) {
     }
 }
 
-void ArenaClear(Arena *arena) {
+void arena_clear(Arena *arena) {
     arena->size = 0;
 }
 
-void ArenaDestroy(Arena *arena) {
+void arena_destroy(Arena *arena) {
     os_mem_free(arena, arena->capacity);
 }

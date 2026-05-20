@@ -8,18 +8,21 @@
 #include "render.h"
 
 int main(void) {
-    const i32 window_width = 500;
-    const i32 window_height = 500;
+    const i32 window_width = 800;
+    const i32 window_height = 450;
     RGFW_window *window = RGFW_createWindow("Software Renderer", 0, 0, window_width, window_height, RGFW_windowCenter | RGFW_windowTransparent | RGFW_windowNoResize);
     RGFW_window_setExitKey(window, RGFW_keyEscape);
 
-    const i32 frame_buffer_len = window_width*window_height*4;
-    u8 *frame_buffer = (u8 *)malloc(frame_buffer_len);
-    RGFW_surface *surface = RGFW_createSurface(frame_buffer, (i32)window_width, (i32)window_height, RGFW_formatRGBA8);
 
-    GameState state = {0};
-    state.arena = ArenaInit();
-    state.mesh = mesh_from_obj(state.arena, "res/model.obj");
+    RenderState state = {0};
+    state.arena = arena_init();
+    state.window_width = window_width;
+    state.window_height = window_height;
+    state.frame_buffer_len = state.window_width * state.window_height;
+    state.frame_buffer = (ColorRGBA *)arena_push(state.arena, state.frame_buffer_len * sizeof(ColorRGBA));
+    state.model = mesh_from_obj(state.arena, "res/model.obj");
+
+    RGFW_surface *surface = RGFW_createSurface((u8 *)state.frame_buffer, state.window_width, state.window_height, RGFW_formatRGBA8);
 
     while (RGFW_window_shouldClose(window) == RGFW_FALSE) {
         RGFW_pollEvents();
@@ -27,15 +30,14 @@ int main(void) {
         i32 w, h;
         RGFW_window_getSize(window, (i32 *)&w, (i32 *)&h);
 
-        UpdateAndRender(frame_buffer, frame_buffer_len, w, h, &state);
+        update_and_render(&state);
 
         RGFW_window_blitSurface(window, surface);
     }
 
-    ArenaDestroy(state.arena);
+    arena_destroy(state.arena);
 
     RGFW_surface_free(surface);
-    free(frame_buffer);
     RGFW_window_close(window);
 }
 

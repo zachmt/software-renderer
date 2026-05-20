@@ -2,8 +2,8 @@
 
 #include <assert.h>
 #include <stdlib.h>
-#include <math.h>
 #include <stdio.h>
+#include <math.h>
 
 static ColorRGBA red = {.r = 255, .g = 0, .b = 0, .a = 255};
 static ColorRGBA green = {.r = 0, .g = 255, .b = 0, .a = 255};
@@ -11,33 +11,20 @@ static ColorRGBA blue = {.r = 0, .g = 0, .b = 255, .a = 255};
 static ColorRGBA white = {.r = 255, .g = 255, .b = 255, .a = 255};
 static ColorRGBA black = {.r = 0, .g = 0, .b = 0, .a = 255};
 
-static void clear(u8 *frame_buffer, u32 frame_buffer_len, ColorRGBA color) {
-    for (u32 i = 0; i < frame_buffer_len; i += 4) {
-        frame_buffer[i] = color.r;
-        frame_buffer[i+1] = color.g;
-        frame_buffer[i+2] = color.b;
-        frame_buffer[i+3] = color.a;
+static void clear(RenderState *state, ColorRGBA color) {
+    for (u32 i = 0; i < state->frame_buffer_len; i++) {
+        state->frame_buffer[i] = color;
     }
 }
 
-static void drawPixel(u8 *frame_buffer, i32 width, i32 height, i32 x, i32 y, ColorRGBA color) {
-    if (x >= 0 && x < width && y >= 0 && y < height) {
-        u32 i = 4 * (y * width + x);
-        frame_buffer[i] = color.r;
-        frame_buffer[i+1] = color.g;
-        frame_buffer[i+2] = color.b;
-        frame_buffer[i+3] = color.a;
+static void draw_pixel(RenderState *state, i32 x, i32 y, ColorRGBA color) {
+    if (x >= 0 && x < (i32)state->window_width && y >= 0 && y < (i32)state->window_height) {
+        u32 i = (y * state->window_width + x);
+        state->frame_buffer[i] = color;
     }
 }
 
-static void drawLine(u8 *frame_buffer, i32 width, i32 height, i32 ax, i32 ay, i32 bx, i32 by, ColorRGBA color) {
-#if 0
-    for (float t = 0.0f; t < 1.0f; t += 0.02f) {
-        u32 x = (u32)((float)ax + t * ((float)bx - (float)ax));
-        u32 y = (u32)((float)ay + t * ((float)by - (float)ay));
-        drawPixel(frame_buffer, width, height, x, y, color);
-    }
-#else
+static void draw_line(RenderState *state, i32 ax, i32 ay, i32 bx, i32 by, ColorRGBA color) {
     bool32 steep = abs(ax-bx) < abs(ay-by);
     if (steep) {
         SWAP(i32, ax, ay);
@@ -51,39 +38,36 @@ static void drawLine(u8 *frame_buffer, i32 width, i32 height, i32 ax, i32 ay, i3
         float t = ((float)(x-ax)) / ((float)(bx-ax));
         i32 y = (u32)roundf(((float)ay + ((float)(by-ay)) * t));
         if (steep) {
-            drawPixel(frame_buffer, width, height, y, x, color);
+            draw_pixel(state, y, x, color);
         } else {
-            drawPixel(frame_buffer, width, height, x, y, color);
+            draw_pixel(state, x, y, color);
         }
     }
-#endif
 }
 
-static void draw_wireframe(u8 *frame_buffer, i32 width, i32 height, Mesh *mesh, ColorRGBA color) {
+static Vec2 model_to_screen_projection(RenderState *state, Vec4 v) {
+    f32 aspect_ratio = (f32)state->window_width / (f32)state->window_height;
+    Vec2 res = {0};
+    res.x = (v.x + 1.0) * (f32)state->window_width * 0.5;
+    res.y = (v.y - 1.0) * (f32)state->window_height * 0.5 * -1 * aspect_ratio;
+    return res;
+}
+
+static void draw_wireframe(RenderState *state, Model *mesh, ColorRGBA color) {
     for (u32 face_index = 0; face_index < mesh->face_count; face_index++) {
         Face *face = mesh->faces + face_index;
-        Vec4 vert0 = mesh->vertices[face->vertex_indices[0]];
-        Vec4 vert1 = mesh->vertices[face->vertex_indices[1]];
-        Vec4 vert2 = mesh->vertices[face->vertex_indices[2]];
-        drawLine(frame_buffer, width, height, (i32)((vert0.x + 1.0)* width *0.5), (i32)((vert0.y - 1.0)* width*-1 *0.5), (i32)((vert1.x + 1.0)* width *0.5), (i32)((vert1.y - 1.0)* width*-1 *0.5), color);
-        drawLine(frame_buffer, width, height, (i32)((vert1.x + 1.0)* width *0.5), (i32)((vert1.y - 1.0)* width*-1 *0.5), (i32)((vert2.x + 1.0)* width *0.5), (i32)((vert2.y - 1.0)* width*-1 *0.5), color);
-        drawLine(frame_buffer, width, height, (i32)((vert2.x + 1.0)* width *0.5), (i32)((vert2.y - 1.0)* width*-1 *0.5), (i32)((vert0.x + 1.0)* width *0.5), (i32)((vert0.y - 1.0)* width*-1 *0.5), color);
+        Vec2 vert0 = model_to_screen_projection(state, mesh->vertices[face->vertex_indices[0]]);
+        Vec2 vert1 = model_to_screen_projection(state, mesh->vertices[face->vertex_indices[1]]);
+        Vec2 vert2 = model_to_screen_projection(state, mesh->vertices[face->vertex_indices[2]]);
+        draw_line(state, vert0.x, vert0.y, vert1.x, vert1.y, color);
+        draw_line(state, vert1.x, vert1.y, vert2.x, vert2.y, color);
+        draw_line(state, vert2.x, vert2.y, vert0.x, vert0.y, color);
     }
 }
 
-void UpdateAndRender(u8 *frame_buffer, u64 frame_buffer_len, u32 width, u32 height, GameState *state) {
-    (void)state;
+void update_and_render(RenderState *state) {
+    assert(state->window_width * state->window_height <= state->frame_buffer_len);
 
-    assert(width * height * 4 <= frame_buffer_len);
-
-    clear(frame_buffer, frame_buffer_len, black);
-
-    // drawLine(frame_buffer, width, height, 7, 3, 62, 53, red);
-    // drawLine(frame_buffer, width, height, 7, 3, 12, 37, blue);
-    // drawLine(frame_buffer, width, height, 12, 37, 62, 53, green);
-    //
-    // drawPixel(frame_buffer, width, height, 7, 3, white);
-    // drawPixel(frame_buffer, width, height, 12, 37, white);
-    // drawPixel(frame_buffer, width, height, 62, 53, white);
-    draw_wireframe(frame_buffer, width, height, state->mesh, blue);
+    clear(state, black);
+    draw_wireframe(state, state->model, white);
 }

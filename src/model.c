@@ -16,7 +16,7 @@ static Vec4 parse_vertex(char *input) {
                 input++;
             }
             *input = '\0';
-            res.vals[index] = (f32)atof(num_start);
+            res.v[index] = (f32)atof(num_start);
             index++;
         }
         input++;
@@ -57,13 +57,13 @@ static Face parse_face(char *input) {
     return face;
 }
 
-Mesh *mesh_from_obj(Arena *arena, char *file_path) {
+Model *mesh_from_obj(Arena *arena, char *file_path) {
     FILE *obj_file = fopen(file_path, "r");
     if (obj_file == 0) {
         return 0;
     }
 
-    Mesh *mesh = (Mesh *)ArenaPush(arena, sizeof(Mesh));
+    Model *mesh = (Model *)arena_push(arena, sizeof(Model));
     mesh->vertex_count = 0;
     mesh->texture_vertex_count = 0;
     mesh->vertex_normals_count = 0;
@@ -83,10 +83,10 @@ Mesh *mesh_from_obj(Arena *arena, char *file_path) {
     }
     rewind(obj_file);
 
-    mesh->vertices = (Vec4 *)ArenaPush(arena, sizeof(Vec4) * mesh->vertex_count);
-    mesh->texture_vertices = (Vec3 *)ArenaPush(arena, sizeof(Vec3) * mesh->texture_vertex_count);
-    mesh->vertex_normals = (Vec3 *)ArenaPush(arena, sizeof(Vec3) * mesh->vertex_normals_count);
-    mesh->faces = (Face *)ArenaPush(arena, sizeof(Face) * mesh->face_count);
+    mesh->vertices = (Vec4 *)arena_push(arena, sizeof(Vec4) * mesh->vertex_count);
+    mesh->texture_vertices = (Vec3 *)arena_push(arena, sizeof(Vec3) * mesh->texture_vertex_count);
+    mesh->vertex_normals = (Vec3 *)arena_push(arena, sizeof(Vec3) * mesh->vertex_normals_count);
+    mesh->faces = (Face *)arena_push(arena, sizeof(Face) * mesh->face_count);
 
     Vec4 *current_vertex = mesh->vertices;
     Face *current_face = mesh->faces;
