@@ -3,6 +3,7 @@
 #include "core/core.h"
 #include "core/arena.h"
 #include "model.h"
+#include <stddef.h>
 
 typedef union {
     struct {
@@ -17,7 +18,7 @@ typedef union {
 typedef struct {
     Arena *arena;
     ColorRGBA *frame_buffer;
-    u64 frame_buffer_len;
+    size_t frame_buffer_len;
     u32 window_width;
     u32 window_height;
     Model *model;

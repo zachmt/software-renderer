@@ -40,7 +40,8 @@ done
 
 build_destination="out"
 mkdir -p "$build_destination"
-cflags=(-g -Og -Wall -Wextra -Wpedantic -Wno-unused-parameter -Wno-unused-function)
-includes=(-Isrc -I"$wayland_header_destination" -I"$wayland_source_destination")
+cflags=(-g3 -Og -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all)
+warnings=(-Weverything -Wno-assign-enum -Wno-declaration-after-statement -Wno-implicit-int-enum-cast -Wno-undef -Wno-unsafe-buffer-usage -Wno-unused-function -Wno-unused-macros -Wno-unused-parameter -Wno-unused-variable -Wno-static-in-inline)
+includes=(-I src -isystem src/thirdparty -isystem "$wayland_header_destination" -isystem "$wayland_source_destination")
 libs=(-D RGFW_WAYLAND -lwayland-cursor -lwayland-client -lxkbcommon  -lwayland-egl -lEGL -lm)
-gcc "${cflags[@]}" "${includes[@]}" src/main.c -o "$(joinpath "$build_destination" "game")" "${libs[@]}"
+clang "${cflags[@]}" "${warnings[@]}" "${includes[@]}" src/main.c -o "$(joinpath "$build_destination" "game")" "${libs[@]}"

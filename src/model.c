@@ -38,15 +38,18 @@ static Face parse_face(char *input) {
             }
             *input = '\0';
             switch (type) {
+                // TODO: support negative indices
                 case 0: {
-                            face.vertex_indices[index] = atoi(num_start) - 1;
+                            face.vertex_indices[index] = (u32)atoi(num_start) - 1;
                         } break;
                 case 1: {
-                            face.texture_indices[index] = atoi(num_start) - 1;
+                            face.texture_indices[index] = (u32)atoi(num_start) - 1;
                         } break;
                 case 2: {
-                            face.normal_indices[index] = atoi(num_start) - 1;
+                            face.normal_indices[index] = (u32)atoi(num_start) - 1;
                             index++;
+                        } break;
+                default:{
                         } break;
             }
             type++;
@@ -63,7 +66,7 @@ Model *mesh_from_obj(Arena *arena, char *file_path) {
         return 0;
     }
 
-    Model *mesh = (Model *)arena_push(arena, sizeof(Model));
+    Model *mesh = (Model *)arena_push(arena, sizeof(Model), AlignOf(Model));
     mesh->vertex_count = 0;
     mesh->texture_vertex_count = 0;
     mesh->vertex_normals_count = 0;
@@ -83,10 +86,10 @@ Model *mesh_from_obj(Arena *arena, char *file_path) {
     }
     rewind(obj_file);
 
-    mesh->vertices = (Vec4 *)arena_push(arena, sizeof(Vec4) * mesh->vertex_count);
-    mesh->texture_vertices = (Vec3 *)arena_push(arena, sizeof(Vec3) * mesh->texture_vertex_count);
-    mesh->vertex_normals = (Vec3 *)arena_push(arena, sizeof(Vec3) * mesh->vertex_normals_count);
-    mesh->faces = (Face *)arena_push(arena, sizeof(Face) * mesh->face_count);
+    mesh->vertices = (Vec4 *)arena_push(arena, sizeof(Vec4) * mesh->vertex_count, AlignOf(Vec4));
+    mesh->texture_vertices = (Vec3 *)arena_push(arena, sizeof(Vec3) * mesh->texture_vertex_count, AlignOf(Vec3));
+    mesh->vertex_normals = (Vec3 *)arena_push(arena, sizeof(Vec3) * mesh->vertex_normals_count, AlignOf(Vec3));
+    mesh->faces = (Face *)arena_push(arena, sizeof(Face) * mesh->face_count, AlignOf(Face));
 
     Vec4 *current_vertex = mesh->vertices;
     Face *current_face = mesh->faces;

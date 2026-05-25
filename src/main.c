@@ -1,6 +1,5 @@
-#include "model.h"
 #define RGFW_IMPLEMENTATION
-#include "thirdparty/RGFW.h"
+#include "RGFW.h"
 
 #include "core/core.h"
 #include "core/arena.h"
@@ -19,10 +18,10 @@ int main(void) {
     state.window_width = window_width;
     state.window_height = window_height;
     state.frame_buffer_len = state.window_width * state.window_height;
-    state.frame_buffer = (ColorRGBA *)arena_push(state.arena, state.frame_buffer_len * sizeof(ColorRGBA));
+    state.frame_buffer = (ColorRGBA *)arena_push(state.arena, state.frame_buffer_len * sizeof(ColorRGBA), AlignOf(ColorRGBA));
     state.model = mesh_from_obj(state.arena, "res/model.obj");
 
-    RGFW_surface *surface = RGFW_createSurface((u8 *)state.frame_buffer, state.window_width, state.window_height, RGFW_formatRGBA8);
+    RGFW_surface *surface = RGFW_createSurface((u8 *)state.frame_buffer, (i32)state.window_width, (i32)state.window_height, RGFW_formatRGBA8);
 
     while (RGFW_window_shouldClose(window) == RGFW_FALSE) {
         RGFW_pollEvents();

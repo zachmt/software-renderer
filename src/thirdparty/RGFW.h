@@ -674,7 +674,7 @@ typedef RGFW_ENUM(u8, RGFW_eventType) {
 	RGFW_mouseButtonPressed, /*!< a mouse button has been pressed (left,middle,right) */
 	RGFW_mouseButtonReleased, /*!< a mouse button has been released (left,middle,right) */
 	RGFW_mouseScroll, /*!< a mouse scroll event */
-	RGFW_mousePosChanged, /*!< the position of the mouse has been changed */
+	RGFW_mouseMotion, /*!< the position of the mouse has been changed / the mouse has moved */
 	RGFW_mouseRawMotion, /*!< raw mouse motion */
 	RGFW_mouseEnter, /*!< mouse entered the window */
 	RGFW_mouseLeave, /*!< mouse left the window */
@@ -692,7 +692,8 @@ typedef RGFW_ENUM(u8, RGFW_eventType) {
 	RGFW_scaleUpdated, /*!< content scale factor changed */
 	RGFW_monitorConnected, /*!< a monitor has been connected */
 	RGFW_monitorDisconnected, /*!< a monitor has been disconnected */
-	RGFW_eventCount /*!< the number of event types there are */
+	RGFW_eventCount, /*!< the number of event types there are */
+	RGFW_mousePosChanged = RGFW_mouseMotion, /*!< alias for RGFW_mouseMotion (may be deleted at some point) */
 };
 
 /*! @brief flags for toggling whether or not an event should be processed */
@@ -703,7 +704,7 @@ typedef RGFW_ENUM(u32, RGFW_eventFlag) {
     RGFW_mouseScrollFlag = RGFW_BIT(RGFW_mouseScroll),
     RGFW_mouseButtonPressedFlag = RGFW_BIT(RGFW_mouseButtonPressed),
     RGFW_mouseButtonReleasedFlag = RGFW_BIT(RGFW_mouseButtonReleased),
-    RGFW_mousePosChangedFlag = RGFW_BIT(RGFW_mousePosChanged),
+    RGFW_mouseMotionFlag = RGFW_BIT(RGFW_mouseMotion),
     RGFW_mouseRawMotionFlag = RGFW_BIT(RGFW_mouseRawMotion),
     RGFW_mouseEnterFlag = RGFW_BIT(RGFW_mouseEnter),
     RGFW_mouseLeaveFlag = RGFW_BIT(RGFW_mouseLeave),
@@ -721,9 +722,10 @@ typedef RGFW_ENUM(u32, RGFW_eventFlag) {
     RGFW_dataDragFlag = RGFW_BIT(RGFW_dataDrag),
 	RGFW_monitorConnectedFlag = RGFW_BIT(RGFW_monitorConnected),
 	RGFW_monitorDisconnectedFlag = RGFW_BIT(RGFW_monitorDisconnected),
+    RGFW_mousePosChangedFlag = RGFW_mouseMotionFlag, /* alias for RGFW_mouseMotionFlag (may be deleted at some point) */
 
     RGFW_keyEventsFlag = RGFW_keyPressedFlag | RGFW_keyReleasedFlag | RGFW_keyCharFlag,
-    RGFW_mouseEventsFlag = RGFW_mouseButtonPressedFlag | RGFW_mouseButtonReleasedFlag | RGFW_mousePosChangedFlag | RGFW_mouseEnterFlag | RGFW_mouseLeaveFlag | RGFW_mouseScrollFlag | RGFW_mouseRawMotionFlag,
+    RGFW_mouseEventsFlag = RGFW_mouseButtonPressedFlag | RGFW_mouseButtonReleasedFlag | RGFW_mouseMotionFlag | RGFW_mouseEnterFlag | RGFW_mouseLeaveFlag | RGFW_mouseScrollFlag | RGFW_mouseRawMotionFlag,
     RGFW_windowEventsFlag = RGFW_windowMovedFlag | RGFW_windowResizedFlag | RGFW_windowRefreshFlag | RGFW_windowMaximizedFlag | RGFW_windowMinimizedFlag | RGFW_windowRestoredFlag | RGFW_scaleUpdatedFlag,
     RGFW_windowFocusEventsFlag = RGFW_windowFocusInFlag | RGFW_windowFocusOutFlag,
     RGFW_dataDragDropEventsFlag = RGFW_dataDropFlag | RGFW_dataDragFlag,
@@ -761,13 +763,13 @@ typedef struct RGFW_mouseDeltaEvent {
 	float x, y; /*!< the raw mouse scroll or motion delta value */
 } RGFW_mouseDeltaEvent;
 
-/*! @brief event data for a mouse position event (RGFW_mousePosChanged) */
-typedef struct RGFW_mousePosEvent {
+/*! @brief event data for a mouse position event (RGFW_mouseMotion) */
+typedef struct RGFW_mouseMotionEvent {
 	RGFW_eventType type; /*!< which event has been sent?*/
 	RGFW_window* win; /*!< the window this event applies to (for event queue events) */
 	i32 x, y; /*!< mouse x, y of event (or drop point) */
 	RGFW_bool inWindow; /*!< if the mouse is in the window or not */
-} RGFW_mousePosEvent;
+} RGFW_mouseMotionEvent;
 
 /*! @brief event data for a key press/release event */
 typedef struct RGFW_keyEvent {
@@ -835,7 +837,7 @@ typedef union RGFW_event {
 	RGFW_windowUpdateEvent update; /*!< data for window update/move/resize/refresh events */
 	RGFW_mouseButtonEvent button; /*!< data for a button press/release */
 	RGFW_mouseDeltaEvent delta; /*!< data for a mouse scroll or raw motion */
-	RGFW_mousePosEvent mouse; /*!< data for mouse motion events */
+	RGFW_mouseMotionEvent mouse; /*!< data for mouse motion events */
 	RGFW_keyEvent key; /*!< data for key press/release/hold events */
 	RGFW_keyCharEvent keyChar; /*!< data for key character events */
 	RGFW_dataDropEvent drop; /*!< data dropping events */
@@ -3254,7 +3256,7 @@ RGFWDEF void RGFW_windowRestoredCallback(RGFW_window* win, i32 x, i32 y, i32 w, 
 RGFWDEF void RGFW_windowMovedCallback(RGFW_window* win, i32 x, i32 y);
 RGFWDEF void RGFW_windowResizedCallback(RGFW_window* win, i32 w, i32 h);
 RGFWDEF void RGFW_windowCloseCallback(RGFW_window* win);
-RGFWDEF void RGFW_mousePosCallback(RGFW_window* win, i32 x, i32 y);
+RGFWDEF void RGFW_mouseMotionCallback(RGFW_window* win, i32 x, i32 y);
 RGFWDEF void RGFW_rawMotionCallback(RGFW_window* win, float x, float y);
 RGFWDEF void RGFW_windowRefreshCallback(RGFW_window* win, i32 x, i32 y, i32 w, i32 h);
 RGFWDEF void RGFW_windowFocusCallback(RGFW_window* win, RGFW_bool inFocus);
@@ -3484,7 +3486,7 @@ void RGFW_windowMovedCallback(RGFW_window* win, i32 x, i32 y) {
 	RGFW_event event;
 	event.type = RGFW_windowMoved;
 	event.update.x = x;
-	event.update.x = y;
+	event.update.y = y;
 	event.update.w = win->w;
 	event.update.h = win->h;
 	event.common.win = win;
@@ -3515,14 +3517,14 @@ void RGFW_windowCloseCallback(RGFW_window* win) {
 	RGFW_eventQueuePushAndCall(&event);
 }
 
-void RGFW_mousePosCallback(RGFW_window* win, i32 x, i32 y) {
+void RGFW_mouseMotionCallback(RGFW_window* win, i32 x, i32 y) {
 	win->internal.lastMouseX = x;
 	win->internal.lastMouseY = y;
 
-	if (!(win->internal.enabledEvents & RGFW_mousePosChangedFlag)) return;
+	if (!(win->internal.enabledEvents & RGFW_mouseMotionFlag)) return;
 
 	RGFW_event event;
-	event.type = RGFW_mousePosChanged;
+	event.type = RGFW_mouseMotion;
 	event.mouse.x = x;
 	event.mouse.y = y;
 	event.mouse.inWindow = win->internal.mouseInside;
@@ -6417,7 +6419,17 @@ void RGFW_FUNC(RGFW_window_setBorder) (RGFW_window* win, RGFW_bool border) {
 }
 
 void RGFW_FUNC(RGFW_window_setRawMouseModePlatform) (RGFW_window* win, RGFW_bool state) {
-	RGFW_UNUSED(win); RGFW_UNUSED(state);
+	RGFW_UNUSED(win);
+	unsigned char mask[XIMaskLen(XI_RawMotion)];
+	RGFW_MEMZERO(mask, sizeof(mask));
+	if (state) XISetMask(mask, XI_RawMotion);
+
+	XIEventMask em;
+	em.deviceid = XIAllMasterDevices;
+	em.mask_len = sizeof(mask);
+	em.mask = mask;
+
+	XISelectEvents(_RGFW->display, XDefaultRootWindow(_RGFW->display), &em, 1);
 }
 
 void RGFW_FUNC(RGFW_window_captureMousePlatform) (RGFW_window* win, RGFW_bool state) {
@@ -6949,11 +6961,11 @@ void RGFW_XHandleEvent(void) {
 			break;
 		}
 		case MotionNotify:
-			RGFW_mousePosCallback(win, E.xmotion.x, E.xmotion.y);
+			RGFW_mouseMotionCallback(win, E.xmotion.x, E.xmotion.y);
 			break;
 
 		case Expose: {
-			RGFW_windowRefreshCallback(win, 0, 0, win->w, win->h);
+			RGFW_windowRefreshCallback(win, E.xexpose.x, E.xexpose.y, E.xexpose.width, E.xexpose.height);
 
 #ifdef RGFW_ADVANCED_SMOOTH_RESIZE
 			XSyncValue value;
@@ -7074,7 +7086,7 @@ void RGFW_XHandleEvent(void) {
 				dragX = xpos;
 				dragY = ypos;
 
-				RGFW_mousePosCallback(win, xpos, ypos);
+				RGFW_mouseMotionCallback(win, xpos, ypos);
                 XEvent reply = { ClientMessage };
 				reply.xclient.window = _RGFW->x11Source;
                 reply.xclient.message_type = XdndStatus;
@@ -8565,17 +8577,6 @@ i32 RGFW_initPlatform_X11(void) {
 	XSetLocaleModifiers("");
 	XRegisterIMInstantiateCallback(_RGFW->display, NULL, NULL, NULL, RGFW_x11_imInitCallback, NULL);
 
-	unsigned char mask[XIMaskLen(XI_RawMotion)];
-	RGFW_MEMZERO(mask, sizeof(mask));
-	XISetMask(mask, XI_RawMotion);
-
-	XIEventMask em;
-	em.deviceid = XIAllMasterDevices;
-	em.mask_len = sizeof(mask);
-	em.mask = mask;
-
-	XISelectEvents(_RGFW->display, XDefaultRootWindow(_RGFW->display), &em, 1);
-
 	i32 errorBase;
 	if (XRRQueryExtension(_RGFW->display, &_RGFW->xrandrEventBase, &errorBase)) {
         XRRSelectInput(_RGFW->display, RootWindow(_RGFW->display, DefaultScreen(_RGFW->display)), RROutputChangeNotifyMask);
@@ -8898,7 +8899,7 @@ static void RGFW_wl_pointer_motion(void* data, struct wl_pointer *pointer, u32 t
 	i32 convertedX = (i32)wl_fixed_to_double(x);
 	i32 convertedY = (i32)wl_fixed_to_double(y);
 
-	RGFW_mousePosCallback(win, convertedX, convertedY);
+	RGFW_mouseMotionCallback(win, convertedX, convertedY);
 }
 
 static void RGFW_wl_pointer_button(void* data, struct wl_pointer *pointer, u32 serial, u32 time, u32 button, u32 state) {
@@ -9333,6 +9334,9 @@ static void RGFW_wl_data_device_selection(void *data, struct wl_data_device *wl_
 
 	ssize_t n = read(pfds[0], buf, sizeof(buf));
 
+	if (_RGFW->clipboard) {
+		RGFW_FREE(_RGFW->clipboard);
+	}
 	_RGFW->clipboard = (char*)RGFW_ALLOC((size_t)n);
 	RGFW_ASSERT(_RGFW->clipboard != NULL);
 	RGFW_STRNCPY(_RGFW->clipboard, buf, (size_t)n);
@@ -9934,10 +9938,32 @@ void RGFW_FUNC(RGFW_pollEvents) (void) {
 
 	/* read the events; if empty this reads from the */
 	/* wayland file descriptor */
-	if (wl_display_dispatch(_RGFW->wl_display) == -1) {
-		return;
-	}
+	struct pollfd fds;
+	memset(&fds, 0, sizeof(fds));
+    fds.fd = wl_display_get_fd(_RGFW->wl_display);
+    fds.events = POLLIN;
+    fds.revents = 0;
 
+    while (1) {
+        while (wl_display_prepare_read(_RGFW->wl_display) != 0) {
+            if (wl_display_dispatch_pending(_RGFW->wl_display) > 0)
+                return;
+        }
+
+        if (poll(&fds, 1, 0) == 0) {
+            wl_display_cancel_read(_RGFW->wl_display);
+            return;
+        }
+
+        if (fds.revents & POLLIN) {
+            wl_display_read_events(_RGFW->wl_display);
+            if (wl_display_dispatch_pending(_RGFW->wl_display) > 0) {
+				return;
+			}
+		} else {
+            wl_display_cancel_read(_RGFW->wl_display);
+		}
+	}
 }
 
 void RGFW_FUNC(RGFW_window_move) (RGFW_window* win, i32 x, i32 y) {
@@ -10700,10 +10726,15 @@ LRESULT CALLBACK WndProcW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			return DefWindowProcW(hWnd, message, wParam, lParam);
 		}
 		case WM_PAINT: {
-            PAINTSTRUCT ps;
-            BeginPaint(hWnd, &ps);
-            RGFW_windowRefreshCallback(win, 0, 0, win->w, win->h);
-            EndPaint(hWnd, &ps);
+			RECT rect;
+			if (GetUpdateRect(hWnd, &rect, FALSE)) {
+				RGFW_windowRefreshCallback(win, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+			} else {
+				PAINTSTRUCT ps;
+				BeginPaint(hWnd, &ps);
+				RGFW_windowRefreshCallback(win, 0, 0, win->w, win->h);
+				EndPaint(hWnd, &ps);
+			}
 
             return DefWindowProcW(hWnd, message, wParam, lParam);
 		}
@@ -10840,7 +10871,7 @@ LRESULT CALLBACK WndProcW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				RGFW_mouseNotifyCallback(win, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), RGFW_TRUE);
 			}
 
-			RGFW_mousePosCallback(win, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+			RGFW_mouseMotionCallback(win, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 			break;
 		}
 		case WM_INPUT: {
@@ -11762,9 +11793,9 @@ void RGFW_win32_createMonitor(DISPLAY_DEVICEW* adapter, DISPLAY_DEVICEW* dd) {
 	node->mon.y = monitorInfo.rcMonitor.top;
 
 	HDC hdc = CreateDCW(monitorInfo.szDevice, NULL, NULL, NULL);
-	/* get pixels per inch */
+
 	float dpiX = (float)GetDeviceCaps(hdc, LOGPIXELSX);
-	float dpiY = (float)GetDeviceCaps(hdc, LOGPIXELSX);
+	float dpiY = (float)GetDeviceCaps(hdc, LOGPIXELSY);
 
 	node->mon.scaleX = dpiX / 96.0f;
 	node->mon.scaleY = dpiY / 96.0f;
@@ -13228,7 +13259,9 @@ static void RGFW__osxDrawRect(id self, SEL _cmd, CGRect rect) {
 	object_getInstanceVariable(self, "RGFW_window", (void**)&win);
 	if (win == NULL) return;
 
-	RGFW_windowRefreshCallback(win, 0, 0, win->w, win->h);
+	float y = RGFW_cocoaYTransform((float)(rect.size.height - 1));
+
+	RGFW_windowRefreshCallback(win, (i32)rect.origin.x, (i32)y, (i32)rect.size.width, (i32)rect.size.height);
 }
 
 static void RGFW__osxMouseEntered(id self, SEL _cmd, id event) {
@@ -13340,7 +13373,7 @@ static void RGFW__osxMouseMoved(id self, SEL _cmd, id event) {
 	CGFloat vecX = ((CGFloat(*)(id, SEL))abi_objc_msgSend_fpret)(event, sel_registerName("deltaX"));
     CGFloat vecY = ((CGFloat(*)(id, SEL))abi_objc_msgSend_fpret)(event, sel_registerName("deltaY"));
 
-    RGFW_mousePosCallback(win, (i32)p.x, (i32)(win->h - p.y));
+    RGFW_mouseMotionCallback(win, (i32)p.x, (i32)(win->h - p.y));
 	RGFW_rawMotionCallback(win, (float)vecX, (float)vecY);
 }
 
@@ -14874,7 +14907,7 @@ EM_BOOL Emscripten_on_focusout(int eventType, const EmscriptenFocusEvent* E, voi
 
 EM_BOOL Emscripten_on_mousemove(int eventType, const EmscriptenMouseEvent* E, void* userData) {
 	RGFW_UNUSED(eventType); RGFW_UNUSED(userData);
-	RGFW_mousePosCallback(_RGFW->root, E->targetX, E->targetY);
+	RGFW_mouseMotionCallback(_RGFW->root, E->targetX, E->targetY);
 	RGFW_rawMotionCallback(_RGFW->root, E->movementX, E->movementY);
     return EM_TRUE;
 }
@@ -14916,7 +14949,7 @@ EM_BOOL Emscripten_on_touchstart(int eventType, const EmscriptenTouchEvent* E, v
 
     size_t i;
     for (i = 0; i < (size_t)E->numTouches; i++) {
-        RGFW_mousePosCallback(_RGFW->root, E->touches[i].targetX, E->touches[i].targetY);
+        RGFW_mouseMotionCallback(_RGFW->root, E->touches[i].targetX, E->touches[i].targetY);
 		RGFW_rawMotionCallback(_RGFW->root, 0, 0);
 	    RGFW_mouseButtonCallback(_RGFW->root, RGFW_mouseLeft, 1);
     }
@@ -14927,11 +14960,11 @@ EM_BOOL Emscripten_on_touchstart(int eventType, const EmscriptenTouchEvent* E, v
 EM_BOOL Emscripten_on_touchmove(int eventType, const EmscriptenTouchEvent* E, void* userData) {
 	RGFW_UNUSED(eventType); RGFW_UNUSED(userData);
 
-	if (!(_RGFW->root->internal.enabledEvents & RGFW_mousePosChangedFlag)) return EM_TRUE;
+	if (!(_RGFW->root->internal.enabledEvents & RGFW_mouseMotionFlag)) return EM_TRUE;
 
     size_t i;
     for (i = 0; i < (size_t)E->numTouches; i++) {
-        RGFW_mousePosCallback(_RGFW->root, E->touches[i].targetX, E->touches[i].targetY);
+        RGFW_mouseMotionCallback(_RGFW->root, E->touches[i].targetX, E->touches[i].targetY);
 		RGFW_rawMotionCallback(_RGFW->root, 0, 0);
     }
     return EM_TRUE;
@@ -14944,7 +14977,7 @@ EM_BOOL Emscripten_on_touchend(int eventType, const EmscriptenTouchEvent* E, voi
 
     size_t i;
     for (i = 0; i < (size_t)E->numTouches; i++) {
-		RGFW_mousePosCallback(_RGFW->root, E->touches[i].targetX, E->touches[i].targetY);
+		RGFW_mouseMotionCallback(_RGFW->root, E->touches[i].targetX, E->touches[i].targetY);
 		RGFW_rawMotionCallback(_RGFW->root, 0, 0);
 		RGFW_mouseButtonCallback(_RGFW->root, RGFW_mouseLeft, 0);
     }
@@ -14976,6 +15009,8 @@ void EMSCRIPTEN_KEEPALIVE RGFW_handleKeyMods(RGFW_bool capital, RGFW_bool numloc
 void EMSCRIPTEN_KEEPALIVE Emscripten_onDrop(char* file, size_t size) {
 	RGFW_dataDropCallback(_RGFW->root, file, size, RGFW_dataFile);
 }
+
+void EMSCRIPTEN_KEEPALIVE RGFW_webFree(void* ptr) { free(ptr); }
 
 void RGFW_stopCheckEvents(void) {
 	_RGFW->stopCheckEvents_bool = RGFW_TRUE;
@@ -15197,7 +15232,7 @@ RGFW_window* RGFW_createWindowPlatform(const char* name, RGFW_windowFlags flags,
 				}
 
 				Module._RGFW_handleKeyEvent(code, codepoint, 1);
-				_free(code);
+				Module._RGFW_webFree(code);
 			},
 		true);
 		window.addEventListener("keyup",
@@ -15205,7 +15240,7 @@ RGFW_window* RGFW_createWindowPlatform(const char* name, RGFW_windowFlags flags,
 				var code = stringToNewUTF8(event.code);
 				Module._RGFW_handleKeyMods(event.getModifierState("CapsLock"), event.getModifierState("NumLock"), event.getModifierState("Control"), event.getModifierState("Alt"), event.getModifierState("Shift"), event.getModifierState("Meta"), event.getModifierState("ScrollLock"));
 				Module._RGFW_handleKeyEvent(code, 0, 0);
-				_free(code);
+				Module._RGFW_webFree(code);
 			},
 		true);
 	});
@@ -15264,8 +15299,13 @@ RGFW_bool RGFW_window_fetchSize(RGFW_window* win, i32* w, i32* h) {
 }
 
 void RGFW_pollEvents(void) {
+	static int using_asyncify = -1;
+	if (using_asyncify == -1) using_asyncify = EM_ASM_INT({ return 'Asyncify' in Module; });
+
 	RGFW_resetPrevState();
-	emscripten_sleep(0);
+	if (using_asyncify) {
+		emscripten_sleep(0);
+	}
 }
 
 void RGFW_window_resize(RGFW_window* win, i32 w, i32 h) {
@@ -15386,17 +15426,34 @@ RGFW_bool RGFW_window_createContextPtr_OpenGL(RGFW_window* win, RGFW_glContext* 
 	attrs.failIfMajorPerformanceCaveat = EM_FALSE;
 
 	attrs.enableExtensionsByDefault = EM_TRUE;
-	attrs.explicitSwapControl = EM_TRUE;
 
 	if (hints->profile == RGFW_glWeb) {
 		attrs.majorVersion = (hints->major == 0) ? 1 : hints->major;
 		attrs.minorVersion = hints->minor;
 	} else {
-		attrs.majorVersion = (hints->major == 0) ? 1 : hints->major - 1;
+		attrs.majorVersion = (hints->major == 0) ? 1 : ( (hints->major > 1) ? hints->major - 1 : hints->major );
 		attrs.minorVersion = hints->minor;
 	}
 
+	attrs.explicitSwapControl = EM_TRUE;
 	win->src.ctx.native->ctx = emscripten_webgl_create_context("#canvas", &attrs);
+
+	if (win->src.ctx.native->ctx == 0) {
+		RGFW_debugCallback(RGFW_typeError, RGFW_warningOpenGL, "WebGL: Failed to create an OpenGL Context with explicit swap control.");
+		attrs.explicitSwapControl = EM_FALSE;
+		win->src.ctx.native->ctx = emscripten_webgl_create_context("#canvas", &attrs);
+	}
+
+	if (win->src.ctx.native->ctx == 0) {
+		RGFW_debugCallback(RGFW_typeError, RGFW_errOpenGLContext, "Failed to create an OpenGL Context with the requested attributes, falling back to defaults.");
+		win->src.ctx.native->ctx = emscripten_webgl_create_context("#canvas", &attrs);
+	}
+
+	if (win->src.ctx.native->ctx == 0) {
+		RGFW_debugCallback(RGFW_typeError, RGFW_errOpenGLContext, "Failed to create an OpenGL Context.");
+		return RGFW_FALSE;
+	}
+
 	emscripten_webgl_make_context_current(win->src.ctx.native->ctx);
 
 	#ifdef LEGACY_GL_EMULATION
@@ -15776,8 +15833,8 @@ typedef struct RGFW_FunctionPointers {
     RGFW_window_setName_ptr window_setName;
     RGFW_window_setMousePassthrough_ptr window_setMousePassthrough;
     RGFW_window_setIconEx_ptr window_setIconEx;
-    RGFW_createMouse_ptr loadMouse;
-    RGFW_createMouseStandard_ptr loadMouseStandard;
+    RGFW_createMouse_ptr createMouse;
+    RGFW_createMouseStandard_ptr createMouseStandard;
     RGFW_window_setMousePlatform_ptr window_setMousePlatform;
     RGFW_window_moveMouse_ptr window_moveMouse;
     RGFW_window_hide_ptr window_hide;
@@ -15848,8 +15905,8 @@ void RGFW_window_setMousePassthrough(RGFW_window* win, RGFW_bool passthrough) { 
 #endif
 
 RGFW_bool RGFW_window_setIconEx(RGFW_window* win, u8* data, i32 w, i32 h, RGFW_format format, u8 type) { return RGFW_api.window_setIconEx(win, data, w, h, format, type); }
-RGFW_mouse* RGFW_createMouse(u8* data, i32 w, i32 h, RGFW_format format) { return RGFW_api.loadMouse(data, w, h, format); }
-RGFW_mouse* RGFW_createMouseStandard(RGFW_mouseIcon icon) { return RGFW_api.loadMouseStandard(icon); }
+RGFW_mouse* RGFW_createMouse(u8* data, i32 w, i32 h, RGFW_format format) { return RGFW_api.createMouse(data, w, h, format); }
+RGFW_mouse* RGFW_createMouseStandard(RGFW_mouseIcon icon) { return RGFW_api.createMouseStandard(icon); }
 RGFW_bool RGFW_window_setMousePlatform(RGFW_window* win, RGFW_mouse* mouse) { return RGFW_api.window_setMousePlatform(win, mouse); }
 void RGFW_window_moveMouse(RGFW_window* win, i32 x, i32 y) { RGFW_api.window_moveMouse(win, x, y); }
 void RGFW_window_hide(RGFW_window* win) { RGFW_api.window_hide(win); }
@@ -15925,7 +15982,8 @@ void RGFW_load_X11(void) {
     RGFW_api.window_setMousePassthrough = RGFW_window_setMousePassthrough_X11;
 #endif
     RGFW_api.window_setIconEx = RGFW_window_setIconEx_X11;
-    RGFW_api.loadMouse = RGFW_createMouse_X11;
+    RGFW_api.createMouse = RGFW_createMouse_X11;
+	RGFW_api.createMouseStandard = RGFW_createMouseStandard_X11;
     RGFW_api.window_setMousePlatform = RGFW_window_setMousePlatform_X11;
     RGFW_api.window_moveMouse = RGFW_window_moveMouse_X11;
     RGFW_api.window_hide = RGFW_window_hide_X11;
@@ -15992,7 +16050,8 @@ void RGFW_load_Wayland(void) {
     RGFW_api.window_setMousePassthrough = RGFW_window_setMousePassthrough_Wayland;
 #endif
     RGFW_api.window_setIconEx = RGFW_window_setIconEx_Wayland;
-	RGFW_api.loadMouse = RGFW_createMouse_Wayland;
+    RGFW_api.createMouse = RGFW_createMouse_Wayland;
+	RGFW_api.createMouseStandard = RGFW_createMouseStandard_Wayland;
     RGFW_api.window_setMousePlatform = RGFW_window_setMousePlatform_Wayland;
     RGFW_api.window_moveMouse = RGFW_window_moveMouse_Wayland;
     RGFW_api.window_hide = RGFW_window_hide_Wayland;

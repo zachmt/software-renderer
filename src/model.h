@@ -18,13 +18,12 @@ typedef struct {
 
 typedef struct {
     Vec4 *vertices;
-    u32 vertex_count;
     Vec3 *texture_vertices;
-    u32 texture_vertex_count;
     Vec3 *vertex_normals;
-    u32 vertex_normals_count;
-
     Face *faces;
+    u32 vertex_count;
+    u32 texture_vertex_count;
+    u32 vertex_normals_count;
     u32 face_count;
 } Model;
 

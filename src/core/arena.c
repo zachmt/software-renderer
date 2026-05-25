@@ -1,56 +1,48 @@
 #include "core/arena.h"
+#include "core/core.h"
 #include "os/os_core.h"
 #include <assert.h>
 
-static u64 round_down(u64 x, u64 multiple) {
-    assert(multiple != 0);
-    return x - (x % multiple);
-}
-
-static u64 round_up(u64 x, u64 multiple) {
-    assert(multiple != 0);
-    u64 remainder = x % multiple;
-    return (remainder == 0) ? x : x + multiple - remainder;
-}
-
 Arena *arena_init(void) {
     const u64 reservation_size = 1024ULL * 1024ULL * 1024ULL * 64ULL;
-    u8 *base = (u8 *)os_mem_reserve(reservation_size);
+    void *base = os_mem_reserve(reservation_size);
     os_mem_commit(base, sizeof(Arena));
     Arena *arena = (Arena *)base;
-    base += sizeof(Arena);
-    arena->buffer = base;
-    arena->size = 0;
-    arena->capacity = reservation_size - sizeof(Arena);
-    arena->committed = sizeof(Arena);
+    arena->memory_region_start = (u8 *)(arena + 1);
+    arena->bytes_allocated = sizeof(Arena);
+    arena->bytes_reserved = reservation_size;
+    arena->bytes_committed = sizeof(Arena);
     return arena;
 }
 
-u8 *arena_push(Arena *arena, u32 size) {
-    assert(arena->size + size < arena->capacity);
-    if (arena->size + size > arena->committed) {
-        u8 *base = (u8 *)round_down((u64)(arena->buffer + arena->committed), os_get_pagesize());
-        u32 diff = arena->buffer + arena->committed - base;
-        os_mem_commit(base, size + diff);
-        arena->committed += size + diff;
+void *arena_push(Arena *arena, u64 size, u64 alignment) {
+    assert(IsPow2(alignment));
+    u8 *unallocated_start = (u8 *)arena->memory_region_start + arena->bytes_allocated;
+    size += AlignPadPow2((u64)unallocated_start, alignment);
+    assert(arena->bytes_allocated + size < arena->bytes_reserved);
+    if (arena->bytes_allocated + size > arena->bytes_committed) {
+        u8 *uncommitted_start = (u8 *)arena->memory_region_start + arena->bytes_committed;
+        u8 *page_start = (u8 *)AlignDownPow2((u64)uncommitted_start, os_get_pagesize());
+        u64 diff = (u64)(uncommitted_start - page_start);
+        os_mem_commit(page_start, size + diff);
+        arena->bytes_committed += size + diff;
     }
-    u8 *res = arena->buffer + arena->size;
-    arena->size += size;
+    void *res = (u8 *)AlignPow2((u64)arena->memory_region_start + arena->bytes_allocated, alignment);
+    arena->bytes_allocated += size;
     return res;
 }
 
-void arena_shrink(Arena *arena, u32 size) {
-    if (size > arena->size) {
-        arena->size = 0;
-    } else {
-        arena->size -= size;
-    }
+/*
+void arena_shrink(Arena *arena, u64 size) {
+    // TODO: deal with integer underflow?
+    arena->bytes_allocated = Max(sizeof(Arena), arena->bytes_allocated - size);
 }
+*/
 
 void arena_clear(Arena *arena) {
-    arena->size = 0;
+    arena->bytes_allocated = sizeof(Arena);
 }
 
 void arena_destroy(Arena *arena) {
-    os_mem_free(arena, arena->capacity);
+    os_mem_free(arena, arena->bytes_reserved);
 }

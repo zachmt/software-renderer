@@ -1,9 +1,10 @@
 #include "render.h"
 
 #include <assert.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 static ColorRGBA red = {.r = 255, .g = 0, .b = 0, .a = 255};
 static ColorRGBA green = {.r = 0, .g = 255, .b = 0, .a = 255};
@@ -19,24 +20,24 @@ static void clear(RenderState *state, ColorRGBA color) {
 
 static void draw_pixel(RenderState *state, i32 x, i32 y, ColorRGBA color) {
     if (x >= 0 && x < (i32)state->window_width && y >= 0 && y < (i32)state->window_height) {
-        u32 i = (y * state->window_width + x);
+        u32 i = ((u32)y * state->window_width + (u32)x);
         state->frame_buffer[i] = color;
     }
 }
 
-static void draw_line(RenderState *state, i32 ax, i32 ay, i32 bx, i32 by, ColorRGBA color) {
-    bool32 steep = abs(ax-bx) < abs(ay-by);
+static void draw_line(RenderState *state, Vec2 a, Vec2 b, ColorRGBA color) {
+    bool32 steep = fabsf(a.x-b.x) < fabsf(a.y-b.y);
     if (steep) {
-        SWAP(i32, ax, ay);
-        SWAP(i32, bx, by);
+        Swap(f32, a.x, a.y);
+        Swap(f32, b.x, b.y);
     }
-    if (ax > bx) {
-        SWAP(i32, ax, bx);
-        SWAP(i32, ay, by);
+    if (a.x > b.x) {
+        Swap(f32, a.x, b.x);
+        Swap(f32, a.y, b.y);
     }
-    for (i32 x = ax; x < bx; x++) {
-        float t = ((float)(x-ax)) / ((float)(bx-ax));
-        i32 y = (u32)roundf(((float)ay + ((float)(by-ay)) * t));
+    for (i32 x = round_float_to_int(a.x); x < round_float_to_int(b.x); x++) {
+        f32 t = (((f32)x-a.x)) / ((b.x-a.x));
+        i32 y = round_float_to_int(a.y + (b.y-a.y) * t);
         if (steep) {
             draw_pixel(state, y, x, color);
         } else {
@@ -45,11 +46,47 @@ static void draw_line(RenderState *state, i32 ax, i32 ay, i32 bx, i32 by, ColorR
     }
 }
 
+static f32 signed_triangle_area(Vec2 a, Vec2 b, Vec2 c) {
+    // The determinant of this matrix computes the signed area of a
+    // parallelogram formed by AB and AC. Multiply by 0.5 to get the area of
+    // the triangle.
+    Mat2 m = {0};
+    m.m00 = b.x - a.x; m.m01 = c.x - a.x;
+    m.m10 = b.y - a.y; m.m11 = c.y - a.y;
+    return 0.5f * Mat2Determinant(m);
+}
+
+static void draw_triangle(RenderState *state, Vec2 a, Vec2 b, Vec2 c, ColorRGBA color) {
+    Vec2 bounding_box[2] = {0};
+    bounding_box[0].x = Min(Min(a.x, b.x), c.x);
+    bounding_box[0].y = Min(Min(a.y, b.y), c.y);
+    bounding_box[1].x = Max(Max(a.x, b.x), c.x);
+    bounding_box[1].y = Max(Max(a.y, b.y), c.y);
+
+    f32 total_area = signed_triangle_area(a, b, c);
+    if (total_area < 1.0f) {
+        // TODO: proper back-face culling
+        return;
+    }
+    for (i32 y = round_float_to_int(Min(bounding_box[0].y, bounding_box[1].y)); y <= round_float_to_int(Max(bounding_box[0].y, bounding_box[1].y)); y++) {
+        for (i32 x = round_float_to_int(Min(bounding_box[0].x, bounding_box[1].x)); x <= round_float_to_int(Max(bounding_box[0].x, bounding_box[1].x)); x++) {
+            Vec2 p = {.x = (f32)x,.y = (f32)y};
+            f32 alpha = signed_triangle_area(p, b, c) / total_area;
+            f32 beta  = signed_triangle_area(p, c, a) / total_area;
+            f32 gamma = signed_triangle_area(p, a, b) / total_area;
+            if (alpha < 0.0f || beta < 0.0f || gamma < 0.0f) {
+                continue;
+            }
+            draw_pixel(state, x, y, color);
+        }
+    }
+}
+
 static Vec2 model_to_screen_projection(RenderState *state, Vec4 v) {
     f32 aspect_ratio = (f32)state->window_width / (f32)state->window_height;
     Vec2 res = {0};
-    res.x = (v.x + 1.0) * (f32)state->window_width * 0.5;
-    res.y = (v.y - 1.0) * (f32)state->window_height * 0.5 * -1 * aspect_ratio;
+    res.x = (v.x + 1.0f) * (f32)state->window_width * 0.5f;
+    res.y = (-v.y + 1.0f) * (f32)state->window_height * 0.5f * aspect_ratio;
     return res;
 }
 
@@ -59,15 +96,52 @@ static void draw_wireframe(RenderState *state, Model *mesh, ColorRGBA color) {
         Vec2 vert0 = model_to_screen_projection(state, mesh->vertices[face->vertex_indices[0]]);
         Vec2 vert1 = model_to_screen_projection(state, mesh->vertices[face->vertex_indices[1]]);
         Vec2 vert2 = model_to_screen_projection(state, mesh->vertices[face->vertex_indices[2]]);
-        draw_line(state, vert0.x, vert0.y, vert1.x, vert1.y, color);
-        draw_line(state, vert1.x, vert1.y, vert2.x, vert2.y, color);
-        draw_line(state, vert2.x, vert2.y, vert0.x, vert0.y, color);
+        draw_line(state, vert0, vert1, color);
+        draw_line(state, vert1, vert2, color);
+        draw_line(state, vert2, vert0, color);
     }
 }
+
+static ColorRGBA random_color(void) {
+    ColorRGBA res = {0};
+    res.r = (u8)rand();
+    res.g = (u8)rand();
+    res.b = (u8)rand();
+    res.a = 255;
+    return res;
+}
+
+static void draw_model(RenderState *state, Model *mesh) {
+    srand(0);
+    for (u32 face_index = 0; face_index < mesh->face_count; face_index++) {
+        Face *face = mesh->faces + face_index;
+        Vec2 vert0 = model_to_screen_projection(state, mesh->vertices[face->vertex_indices[0]]);
+        Vec2 vert1 = model_to_screen_projection(state, mesh->vertices[face->vertex_indices[1]]);
+        Vec2 vert2 = model_to_screen_projection(state, mesh->vertices[face->vertex_indices[2]]);
+        draw_triangle(state, vert0, vert1, vert2, random_color());
+    }
+}
+
 
 void update_and_render(RenderState *state) {
     assert(state->window_width * state->window_height <= state->frame_buffer_len);
 
     clear(state, black);
-    draw_wireframe(state, state->model, white);
+    Vec2 a = { .x = 1, .y = 1 };
+    Vec2 b = { .x = 30, .y = 30 };
+    Vec2 c = { .x = 60, .y = 60 };
+
+    Vec2 d = { .x = 120, .y = 35 };
+    Vec2 e = { .x = 90, .y = 5 };
+    Vec2 f = { .x = 45, .y = 110 };
+
+    Vec2 g = { .x = 115, .y = 83 };
+    Vec2 h = { .x = 80, .y = 90 };
+    Vec2 i = { .x = 85, .y = 120 };
+
+    // draw_triangle(state, a, b, c, red);
+    // draw_triangle(state, d, e, f, green);
+    // draw_triangle(state, g, h, i, blue);
+    // draw_triangle(state, a, a, a, white);
+    draw_model(state, state->model);
 }

@@ -1,8 +1,9 @@
 #include "os/os_core.h"
 
-#include <sys/mman.h>
 #include <unistd.h>
 #include <assert.h>
+#include <sys/mman.h>
+#include <stdio.h>
 
 u64 os_get_pagesize(void) {
     return (u64)sysconf(_SC_PAGESIZE);
