@@ -1,10 +1,8 @@
 #include "render.h"
+#include "core.h"
 
-#include <assert.h>
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 static ColorRGBA red = {.r = 255, .g = 0, .b = 0, .a = 255};
 static ColorRGBA green = {.r = 0, .g = 255, .b = 0, .a = 255};
@@ -26,7 +24,7 @@ static void draw_pixel(RenderState *state, i32 x, i32 y, ColorRGBA color) {
 }
 
 static void draw_line(RenderState *state, Vec2 a, Vec2 b, ColorRGBA color) {
-    bool32 steep = fabsf(a.x-b.x) < fabsf(a.y-b.y);
+    bool32 steep = f32_abs(a.x-b.x) < f32_abs(a.y-b.y);
     if (steep) {
         Swap(f32, a.x, a.y);
         Swap(f32, b.x, b.y);
@@ -35,9 +33,9 @@ static void draw_line(RenderState *state, Vec2 a, Vec2 b, ColorRGBA color) {
         Swap(f32, a.x, b.x);
         Swap(f32, a.y, b.y);
     }
-    for (i32 x = round_float_to_int(a.x); x < round_float_to_int(b.x); x++) {
+    for (i32 x = round_f32_to_i32(a.x); x < round_f32_to_i32(b.x); x++) {
         f32 t = (((f32)x-a.x)) / ((b.x-a.x));
-        i32 y = round_float_to_int(a.y + (b.y-a.y) * t);
+        i32 y = round_f32_to_i32(a.y + (b.y-a.y) * t);
         if (steep) {
             draw_pixel(state, y, x, color);
         } else {
@@ -66,10 +64,10 @@ static void draw_triangle(RenderState *state, Vec2 a, Vec2 b, Vec2 c, ColorRGBA 
     f32 total_area = signed_triangle_area(a, b, c);
     if (total_area < 1.0f) {
         // TODO: proper back-face culling
-        return;
+        // return;
     }
-    for (i32 y = round_float_to_int(Min(bounding_box[0].y, bounding_box[1].y)); y <= round_float_to_int(Max(bounding_box[0].y, bounding_box[1].y)); y++) {
-        for (i32 x = round_float_to_int(Min(bounding_box[0].x, bounding_box[1].x)); x <= round_float_to_int(Max(bounding_box[0].x, bounding_box[1].x)); x++) {
+    for (i32 y = round_f32_to_i32(Min(bounding_box[0].y, bounding_box[1].y)); y <= round_f32_to_i32(Max(bounding_box[0].y, bounding_box[1].y)); y++) {
+        for (i32 x = round_f32_to_i32(Min(bounding_box[0].x, bounding_box[1].x)); x <= round_f32_to_i32(Max(bounding_box[0].x, bounding_box[1].x)); x++) {
             Vec2 p = {.x = (f32)x,.y = (f32)y};
             f32 alpha = signed_triangle_area(p, b, c) / total_area;
             f32 beta  = signed_triangle_area(p, c, a) / total_area;
@@ -123,21 +121,36 @@ static void draw_model(RenderState *state, Model *mesh) {
 }
 
 
-void update_and_render(RenderState *state) {
-    assert(state->window_width * state->window_height <= state->frame_buffer_len);
+
+
+static void update_and_render(RenderState *state) {
+    Assert(state->window_width * state->window_height <= state->frame_buffer_len);
+
+    Object obj = {0};
+    obj.model    = state->model;
+    obj.scale = 1.0f;
+    obj.position = (Vec3){.x = 0.0f, .y = 0.0f, .z = 0.0f};
+    obj.rotation = QuatIdentity();
+
+    Camera cam = {0};
+    cam.position = (Vec3){.x = 0.5f, .y = -0.5f, .z = -30.0f};
+    cam.rotation = QuatIdentity();
+    cam.fov_y_radians = PI32/2.0f;
+    cam.near_clip = 0.1f;
+    cam.far_clip = 100.0f;
 
     clear(state, black);
-    Vec2 a = { .x = 1, .y = 1 };
-    Vec2 b = { .x = 30, .y = 30 };
-    Vec2 c = { .x = 60, .y = 60 };
-
-    Vec2 d = { .x = 120, .y = 35 };
-    Vec2 e = { .x = 90, .y = 5 };
-    Vec2 f = { .x = 45, .y = 110 };
-
-    Vec2 g = { .x = 115, .y = 83 };
-    Vec2 h = { .x = 80, .y = 90 };
-    Vec2 i = { .x = 85, .y = 120 };
+    // Vec2 a = { .x = 1, .y = 1 };
+    // Vec2 b = { .x = 30, .y = 30 };
+    // Vec2 c = { .x = 60, .y = 60 };
+    //
+    // Vec2 d = { .x = 120, .y = 35 };
+    // Vec2 e = { .x = 90, .y = 5 };
+    // Vec2 f = { .x = 45, .y = 110 };
+    //
+    // Vec2 g = { .x = 115, .y = 83 };
+    // Vec2 h = { .x = 80, .y = 90 };
+    // Vec2 i = { .x = 85, .y = 120 };
 
     // draw_triangle(state, a, b, c, red);
     // draw_triangle(state, d, e, f, green);
@@ -145,3 +158,4 @@ void update_and_render(RenderState *state) {
     // draw_triangle(state, a, a, a, white);
     draw_model(state, state->model);
 }
+

@@ -1,8 +1,8 @@
 #define RGFW_IMPLEMENTATION
 #include "RGFW.h"
 
-#include "core/core.h"
-#include "core/arena.h"
+#include "core.h"
+#include "arena.h"
 #include "model.h"
 #include "render.h"
 
@@ -44,6 +44,6 @@ int main(void) {
 #include "os/linux/os_core.c"
 #include "render.c"
 #include "model.c"
-#include "core/core.c"
-#include "core/arena.c"
-
+#include "core.c"
+#include "arena.c"
+#include "maths.c"

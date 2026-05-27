@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/core.h"
+#include "core.h"
 
 u64 os_get_pagesize(void);
 

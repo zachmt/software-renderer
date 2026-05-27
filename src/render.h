@@ -1,9 +1,8 @@
 #pragma once
 
-#include "core/core.h"
-#include "core/arena.h"
+#include "core.h"
+#include "arena.h"
 #include "model.h"
-#include <stddef.h>
 
 typedef union {
     struct {
@@ -15,6 +14,16 @@ typedef union {
     u8 vals[4];
 } ColorRGBA;
 
+typedef union {
+    struct {
+        f32 r;
+        f32 g;
+        f32 b;
+        f32 a;
+    };
+    f32 vals[4];
+} ColorRGBAf;
+
 typedef struct {
     Arena *arena;
     ColorRGBA *frame_buffer;
@@ -24,4 +33,29 @@ typedef struct {
     Model *model;
 } RenderState;
 
-void update_and_render(RenderState *state);
+typedef struct {
+    Vec3 position;
+    Quat rotation;
+    f32 fov_y_radians;
+    f32 near_clip;
+    f32 far_clip;
+} Camera;
+
+typedef struct {
+    Model *model;
+    f32 scale;
+    Vec3 position;
+    Quat rotation;
+} Object;
+
+typedef union {
+    struct {
+        f32 alpha;
+        f32 beta;
+        f32 gamma;
+    };
+    f32 vals[3];
+} BarycentricPoint;
+
+
+static void update_and_render(RenderState *state);

@@ -1,6 +1,6 @@
 #include "model.h"
-#include "core/arena.h"
-#include "core/core.h"
+#include "arena.h"
+#include "core.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -60,7 +60,7 @@ static Face parse_face(char *input) {
     return face;
 }
 
-Model *mesh_from_obj(Arena *arena, char *file_path) {
+static Model *mesh_from_obj(Arena *arena, char *file_path) {
     FILE *obj_file = fopen(file_path, "r");
     if (obj_file == 0) {
         return 0;

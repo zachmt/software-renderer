@@ -1,7 +1,8 @@
 #pragma once
 
-#include "core/core.h"
-#include "core/arena.h"
+#include "core.h"
+#include "arena.h"
+#include "maths.h"
 
 typedef enum {
     FACE_POSITIONS = 1 << 0,
@@ -27,4 +28,4 @@ typedef struct {
     u32 face_count;
 } Model;
 
-Model *mesh_from_obj(Arena *arena, char *file_path);
+static Model *mesh_from_obj(Arena *arena, char *file_path);
