@@ -46,15 +46,6 @@ typedef int32_t ExitStatus;
 # define AlignOf(T) __alignof__(T)
 #endif
 
-void rng_seed(u32 seed);
-i32 rng_generate_i32(void);
-f32 rng_generate_f32(void);
-f32 rng_generate_unit(void);
-
-void rng_seed(u32 seed) {
-    srand(seed);
-}
-
-i32 rng_generate_i32(void) {
-    return rand();
-}
+static void rng_seed(u32 seed);
+static i32 rng_generate_i32(void);
+static f32 rng_generate_01(void);

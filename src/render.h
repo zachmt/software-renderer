@@ -27,7 +27,9 @@ typedef union {
 typedef struct {
     Arena *arena;
     ColorRGBA *frame_buffer;
-    size_t frame_buffer_len;
+    u64 frame_buffer_len;
+    f32 *depth_buffer;
+    u64 depth_buffer_len;
     u32 window_width;
     u32 window_height;
     Model *model;
@@ -47,15 +49,5 @@ typedef struct {
     Vec3 position;
     Quat rotation;
 } Object;
-
-typedef union {
-    struct {
-        f32 alpha;
-        f32 beta;
-        f32 gamma;
-    };
-    f32 vals[3];
-} BarycentricPoint;
-
 
 static void update_and_render(RenderState *state);

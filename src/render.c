@@ -68,7 +68,10 @@ static void draw_triangle(RenderState *state, Vec2 a, Vec2 b, Vec2 c, ColorRGBA 
     }
     for (i32 y = round_f32_to_i32(Min(bounding_box[0].y, bounding_box[1].y)); y <= round_f32_to_i32(Max(bounding_box[0].y, bounding_box[1].y)); y++) {
         for (i32 x = round_f32_to_i32(Min(bounding_box[0].x, bounding_box[1].x)); x <= round_f32_to_i32(Max(bounding_box[0].x, bounding_box[1].x)); x++) {
-            Vec2 p = {.x = (f32)x,.y = (f32)y};
+            Vec2 p = {
+                .x = (f32)x,
+                .y = (f32)y
+            };
             f32 alpha = signed_triangle_area(p, b, c) / total_area;
             f32 beta  = signed_triangle_area(p, c, a) / total_area;
             f32 gamma = signed_triangle_area(p, a, b) / total_area;
