@@ -3,6 +3,11 @@
 
 #define PI32 3.1459265f
 
+static f32 tangent(f32 radians);
+
+f32 inf32(void);
+f32 neg_inf32(void);
+
 static u64 round_down(u64 x, u64 multiple);
 static u64 round_up(u64 x, u64 multiple);
 static i32 round_f32_to_i32(f32 x);
@@ -37,6 +42,7 @@ static Vec3 Vec3CrossProduct(Vec3 v, Vec3 w);
 static Vec3 Vec3Normalize(Vec3 v);
 static Vec3 Vec3Scale(Vec3 v, f32 n);
 static bool32 Vec3IsEqual(Vec3 v, Vec3 w);
+static f32 Vec3AngleBetween(Vec3 v, Vec3 w);
 static f32 Vec3DotProduct(Vec3 v, Vec3 w);
 static f32 Vec3Magnitude(Vec3 v);
 
@@ -105,8 +111,17 @@ typedef union{
         f32 c;
         f32 d;
     };
+    struct {
+        f32 w;
+        f32 x;
+        f32 y;
+        f32 z;
+    };
     f32 q[4];
 } Quat;
-static Mat4 QuatToMat4(Quat q);
+static Mat4 QuatToRotationMat4(Quat q);
 static Quat QuatConjugate(Quat q);
+static Quat QuatFromAxisAngle(f32 angle, Vec3 axis);
 static Quat QuatIdentity(void);
+static Quat QuatNormalize(Quat q);
+static f32 QuatMagnitude(Quat q);

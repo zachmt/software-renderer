@@ -25,22 +25,12 @@ typedef union {
 } ColorRGBAf;
 
 typedef struct {
-    Arena *arena;
-    ColorRGBA *frame_buffer;
-    u64 frame_buffer_len;
-    f32 *depth_buffer;
-    u64 depth_buffer_len;
-    u32 window_width;
-    u32 window_height;
-    Model *model;
-} RenderState;
-
-typedef struct {
     Vec3 position;
     Quat rotation;
     f32 fov_y_radians;
     f32 near_clip;
     f32 far_clip;
+    f32 aspect_ratio;
 } Camera;
 
 typedef struct {
@@ -49,5 +39,26 @@ typedef struct {
     Vec3 position;
     Quat rotation;
 } Object;
+
+typedef struct {
+    f32 forward_backward;
+    f32 left_right;
+    f32 up_down;
+    f32 look_horizontal;
+    f32 look_vertical;
+} Controls;
+
+typedef struct {
+    Arena *arena;
+    ColorRGBA *frame_buffer;
+    u64 frame_buffer_len;
+    f32 *depth_buffer;
+    u64 depth_buffer_len;
+    u32 window_width;
+    u32 window_height;
+    Object *obj;
+    Camera camera;
+    Controls controls;
+} RenderState;
 
 static void update_and_render(RenderState *state);

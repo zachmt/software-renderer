@@ -2,11 +2,18 @@
 #include <math.h>
 #include <stdlib.h>
 
-static i32 i32_abs(i32 x) {
-    return abs(x);
+f32 tangent(f32 radians) {
+    return tanf(radians);
 }
-static f32 f32_abs(f32 x) {
-    return fabsf(x);
+
+f32 inf32(void) {
+    u32 bits = 0x7f800000;
+    return *(f32 *)&bits;
+}
+
+f32 neg_inf32(void) {
+    u32 bits = 0xff800000;
+    return *(f32 *)&bits;
 }
 
 static i32 round_f32_to_i32(f32 x) {
@@ -22,6 +29,13 @@ static u64 round_up(u64 x, u64 multiple) {
     Assert(multiple != 0);
     u64 remainder = x % multiple;
     return (remainder == 0) ? x : x + multiple - remainder;
+}
+
+static i32 i32_abs(i32 x) {
+    return abs(x);
+}
+static f32 f32_abs(f32 x) {
+    return fabsf(x);
 }
 
 // --- Vec2 ---
@@ -88,6 +102,9 @@ static bool32 Vec3IsEqual(Vec3 v, Vec3 w) {
     return v.x == w.x && v.y == w.y && v.z == w.z;
 }
 
+static f32 Vec3AngleBetween(Vec3 v, Vec3 w) {
+    return acosf(Vec3DotProduct(v, w) / (Vec3Magnitude(v) * Vec3Magnitude(w)));
+}
 
 static f32 Vec3DotProduct(Vec3 v, Vec3 w) {
     return v.x * w.x + v.y * w.y + v.z * w.z;
@@ -228,26 +245,52 @@ static Vec4 Mat4Vec4Multiply(Mat4 m, Vec4 v) {
 }
 
 // --- Quat ---
-static Mat4 QuatToMat4(Quat q) {
+static Mat4 QuatToRotationMat4(Quat q) {
+    assert(fabsf(QuatMagnitude(q) - 1.0f) < 0.01f);
     Mat4 res = {0};
     res.m00 = 1.0f - 2.0f * (q.c * q.c + q.d * q.d); res.m01 = 2.0f * (q.b * q.c - q.d * q.a);        res.m02 = 2.0f * (q.b * q.d + q.c * q.a);
     res.m10 = 2.0f * (q.b * q.c + q.a * q.d);        res.m11 = 1.0f - 2.0f * (q.b * q.b + q.d * q.d); res.m12 = 2.0f * (q.c * q.d - q.a * q.b);
-    res.m20 = 2.0f * (q.b * q.d + q.a * q.c);        res.m21 = 2.0f * (q.c * q.d + q.a * q.b);        res.m22 = 1.0f - 2.0f * (q.b * q.b + q.c * q.b);
+    res.m20 = 2.0f * (q.b * q.d - q.a * q.c);        res.m21 = 2.0f * (q.c * q.d + q.a * q.b);        res.m22 = 1.0f - 2.0f * (q.b * q.b + q.c * q.b);
     res.m33 = 1.0f;
     return res;
 }
 
 static Quat QuatConjugate(Quat q) {
     Quat res = {0};
-    res.a = q.a;
-    res.b = -q.b;
-    res.c = -q.c;
-    res.d = -q.d;
+    res.w = q.w;
+    res.x = -q.x;
+    res.y = -q.y;
+    res.z = -q.z;
     return res;
 }
 
 static Quat QuatIdentity(void) {
     Quat res = {0};
-    res.d = 1.0f;
+    res.w = 1.0f;
     return res;
+}
+
+static Quat QuatFromAxisAngle(f32 angle, Vec3 axis) {
+    Quat res = {0};
+    f32 beta_x = Vec3AngleBetween(axis, (Vec3){.x=1,.y=0,.z=0});
+    f32 beta_y = Vec3AngleBetween(axis, (Vec3){.x=0,.y=1,.z=0});
+    f32 beta_z = Vec3AngleBetween(axis, (Vec3){.x=0,.y=0,.z=1});
+    res.w = cosf(angle / 2.0f);
+    res.x = sinf(angle / 2.0f)*cosf(beta_x);
+    res.y = sinf(angle / 2.0f)*cosf(beta_y);
+    res.z = sinf(angle / 2.0f)*cosf(beta_z);
+    return QuatNormalize(res);
+}
+
+static Quat QuatNormalize(Quat q) {
+    f32 factor = 1.0f / QuatMagnitude(q);
+    q.w *= factor;
+    q.x *= factor;
+    q.y *= factor;
+    q.z *= factor;
+    return q;
+}
+
+static f32 QuatMagnitude(Quat q) {
+        return sqrtf(q.a * q.a + q.b * q.b + q.c * q.c + q.d * q.d);
 }

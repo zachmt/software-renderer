@@ -1,8 +1,9 @@
 #define RGFW_IMPLEMENTATION
 #include "RGFW.h"
 
-#include "core.h"
 #include "arena.h"
+#include "core.h"
+#include "maths.h"
 #include "model.h"
 #include "render.h"
 
@@ -21,12 +22,53 @@ int main(void) {
     state.frame_buffer = (ColorRGBA *)arena_push(state.arena, state.frame_buffer_len * sizeof(ColorRGBA), AlignOf(ColorRGBA));
     state.depth_buffer_len = state.window_width * state.window_height;
     state.depth_buffer = (f32 *)arena_push(state.arena, state.depth_buffer_len * sizeof(f32), AlignOf(f32));
-    state.model = mesh_from_obj(state.arena, "res/model.obj");
+    state.obj = &(Object){
+        .scale = 1.0f,
+        .position = (Vec3){.x = 0.0f, .y = 0.0f, .z = 0.0f},
+        .rotation = QuatIdentity(),
+        .model = mesh_from_obj(state.arena, "res/model.obj"),
+    };
+    state.camera = (Camera){
+        .position = (Vec3){.x = 0.0f, .y = 0.0f, .z = 0.0f},
+        // .position = (Vec3){.x = 0.0f, .y = -2.0f, .z = 2.0f},
+        // .rotation = QuatFromAxisAngle((-45.0f) * (PI32 / 180.0f), (Vec3){.x=1.0f,.y=0.0f,.z=0.0f}),
+        .rotation = QuatIdentity(),
+        .fov_y_radians = (40.0f) * (PI32 / 180.0f),
+        .near_clip = 0.5f,
+        .far_clip = 1000.0f,
+        .aspect_ratio = (f32)state.window_width / (f32)state.window_height,
+    };
 
     RGFW_surface *surface = RGFW_createSurface((u8 *)state.frame_buffer, (i32)state.window_width, (i32)state.window_height, RGFW_formatRGBA8);
 
     while (RGFW_window_shouldClose(window) == RGFW_FALSE) {
         RGFW_pollEvents();
+        if (RGFW_isKeyDown(RGFW_keyW)) {
+            state.controls.forward_backward = 1.0f;
+        } else if (RGFW_isKeyDown(RGFW_keyS)) {
+            state.controls.forward_backward = -1.0f;
+        } else {
+            state.controls.forward_backward = 0.0f;
+        }
+
+        if (RGFW_isKeyDown(RGFW_keyA)) {
+            state.controls.left_right = -1.0f;
+        } else if (RGFW_isKeyDown(RGFW_keyD)) {
+            state.controls.left_right = 1.0f;
+        } else {
+            state.controls.left_right = 0.0f;
+        }
+
+        if (RGFW_isKeyDown(RGFW_keyR)) {
+            state.controls.up_down = 1.0f;
+        } else if (RGFW_isKeyDown(RGFW_keyF)) {
+            state.controls.up_down = -1.0f;
+        } else {
+            state.controls.up_down = 0.0f;
+        }
+
+
+
 
         i32 w, h;
         RGFW_window_getSize(window, (i32 *)&w, (i32 *)&h);
