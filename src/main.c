@@ -19,9 +19,9 @@ int main(void) {
     state.window_width = window_width;
     state.window_height = window_height;
     state.frame_buffer_len = state.window_width * state.window_height;
-    state.frame_buffer = (ColorRGBA *)arena_push(state.arena, state.frame_buffer_len * sizeof(ColorRGBA), AlignOf(ColorRGBA));
+    state.frame_buffer = arena_push(state.arena, state.frame_buffer_len * sizeof(ColorRGBA), AlignOf(ColorRGBA));
     state.depth_buffer_len = state.window_width * state.window_height;
-    state.depth_buffer = (f32 *)arena_push(state.arena, state.depth_buffer_len * sizeof(f32), AlignOf(f32));
+    state.depth_buffer = arena_push(state.arena, state.depth_buffer_len * sizeof(f32), AlignOf(f32));
     state.obj = &(Object){
         .scale = 1.0f,
         .position = (Vec3){.x = 0.0f, .y = 0.0f, .z = 0.0f},

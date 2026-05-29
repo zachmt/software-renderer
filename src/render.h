@@ -49,6 +49,13 @@ typedef struct {
 } Controls;
 
 typedef struct {
+    f32 x;
+    f32 y;
+    f32 z;
+    u8 color[4];
+} EasyFontVertex;
+
+typedef struct {
     Arena *arena;
     ColorRGBA *frame_buffer;
     u64 frame_buffer_len;

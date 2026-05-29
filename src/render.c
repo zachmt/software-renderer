@@ -1,7 +1,10 @@
 #include "render.h"
 #include "core.h"
 #include "maths.h"
-#include "stdio.h"
+
+#include <stdio.h>
+
+#include "stb_easy_font.h"
 
 static ColorRGBA red = {.r = 255, .g = 0, .b = 0, .a = 255};
 static ColorRGBA green = {.r = 0, .g = 255, .b = 0, .a = 255};
@@ -205,20 +208,62 @@ static void draw_object(RenderState *state, Object *obj) {
     }
 }
 
+static void draw_text_quad(RenderState *state, Vec2 a, Vec2 b, Vec2 c, Vec2 d, ColorRGBA color) {
+    Vec2 bounding_box[2] = {0};
+    bounding_box[0].x = Min(Min(Min(a.x, b.x), c.x), d.x);
+    bounding_box[0].y = Min(Min(Min(a.y, b.y), c.y), d.y);
+    bounding_box[1].x = Max(Max(Max(a.x, b.x), c.x), d.x);
+    bounding_box[1].y = Max(Max(Max(a.y, b.y), c.y), d.y);
+
+
+    for (i32 y = round_f32_to_i32(Min(bounding_box[0].y, bounding_box[1].y)); y <= round_f32_to_i32(Max(bounding_box[0].y, bounding_box[1].y)); y++) {
+        for (i32 x = round_f32_to_i32(Min(bounding_box[0].x, bounding_box[1].x)); x <= round_f32_to_i32(Max(bounding_box[0].x, bounding_box[1].x)); x++) {
+            draw_pixel(state, x, y, color);
+        }
+    }
+}
+
+static void render_2d_text(RenderState *state, Vec2 offset, char *str) {
+    EasyFontVertex vb[500 * sizeof(EasyFontVertex) * 4];
+    stb_easy_font_spacing(1);
+    i32 num_quads = stb_easy_font_print(offset.x, offset.y, str, NULL, vb,sizeof(vb));
+    const f32 scale = 2.0f;
+    for (i32 i = 0; i < num_quads * 4; i+=4) {
+        Vec2 a = {
+            .x = vb[i].x * scale,
+            .y = vb[i].y * scale,
+        };
+        Vec2 b = {
+            .x = vb[i+1].x * scale,
+            .y = vb[i+1].y * scale,
+        };
+        Vec2 c = {
+            .x = vb[i+2].x * scale,
+            .y = vb[i+2].y * scale,
+        };
+        Vec2 d = {
+            .x = vb[i+3].x * scale,
+            .y = vb[i+3].y * scale,
+        };
+        draw_text_quad(state, a,b,c,d, white);
+    }
+}
+
 
 static void update_and_render(RenderState *state) {
     const f32 max_camera_speed = 1.0f;
     Assert(state->window_width * state->window_height <= state->frame_buffer_len);
-    printf("left_right %f\n", state->controls.left_right);
-    printf("forward_backward %f\n", state->controls.forward_backward);
+    // printf("left_right %f\n", state->controls.left_right);
+    // printf("forward_backward %f\n", state->controls.forward_backward);
     state->camera.aspect_ratio = (f32)state->window_width / (f32)state->window_height;
-    state->camera.position.x += 0.01 * state->controls.left_right;
-    state->camera.position.y += 0.01 * state->controls.forward_backward;
-    state->camera.position.z += 0.01 * state->controls.up_down;
+    state->camera.position.x += 0.01f * state->controls.left_right;
+    state->camera.position.y += 0.01f * state->controls.forward_backward;
+    state->camera.position.z += 0.01f * state->controls.up_down;
 
 
     clear_frame_buffer(state, black);
     reset_depth_buffer(state);
     draw_object(state, state->obj);
+    render_2d_text(state, (Vec2){.x=20,.y=20},"hello world");
 }
 

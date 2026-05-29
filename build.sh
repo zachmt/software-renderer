@@ -41,7 +41,7 @@ done
 build_destination="out"
 mkdir -p "$build_destination"
 cflags=(-g3 -Og -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all)
-warnings=(-Weverything -Wno-assign-enum -Wno-declaration-after-statement -Wno-implicit-int-enum-cast -Wno-undef -Wno-unsafe-buffer-usage -Wno-unused-function -Wno-unused-macros -Wno-unused-parameter -Wno-unused-variable -Wno-static-in-inline -Wno-undefined-internal)
+warnings=(-Weverything -Wno-assign-enum -Wno-declaration-after-statement -Wno-implicit-int-enum-cast -Wno-undef -Wno-unsafe-buffer-usage -Wno-unused-function -Wno-unused-macros -Wno-unused-parameter -Wno-unused-variable -Wno-static-in-inline -Wno-undefined-internal -Wno-implicit-void-ptr-cast -Wno-float-equal)
 includes=(-I src -isystem src/thirdparty -isystem "$wayland_header_destination" -isystem "$wayland_source_destination")
 libs=(-D RGFW_WAYLAND -lwayland-cursor -lwayland-client -lxkbcommon -lm)
 clang "${cflags[@]}" "${warnings[@]}" "${includes[@]}" src/main.c -o "$(joinpath "$build_destination" "game")" "${libs[@]}"
