@@ -19,20 +19,20 @@ int main(void) {
     state.window_width = window_width;
     state.window_height = window_height;
     state.frame_buffer_len = state.window_width * state.window_height;
-    state.frame_buffer = arena_push(state.arena, state.frame_buffer_len * sizeof(ColorRGBA), AlignOf(ColorRGBA));
+    state.frame_buffer = arena_push(state.arena, state.frame_buffer_len * sizeof(ColorRGBA), align_of(ColorRGBA));
     state.depth_buffer_len = state.window_width * state.window_height;
-    state.depth_buffer = arena_push(state.arena, state.depth_buffer_len * sizeof(f32), AlignOf(f32));
+    state.depth_buffer = arena_push(state.arena, state.depth_buffer_len * sizeof(f32), align_of(f32));
     state.obj = &(Object){
         .scale = 1.0f,
         .position = (Vec3){.x = 0.0f, .y = 0.0f, .z = 0.0f},
-        .rotation = QuatIdentity(),
+        .rotation = quat_identity,
         .model = mesh_from_obj(state.arena, "res/model.obj"),
     };
     state.camera = (Camera){
         .position = (Vec3){.x = 0.0f, .y = 0.0f, .z = 0.0f},
         // .position = (Vec3){.x = 0.0f, .y = -2.0f, .z = 2.0f},
         // .rotation = QuatFromAxisAngle((-45.0f) * (PI32 / 180.0f), (Vec3){.x=1.0f,.y=0.0f,.z=0.0f}),
-        .rotation = QuatIdentity(),
+        .rotation = quat_identity,
         .fov_y_radians = (40.0f) * (PI32 / 180.0f),
         .near_clip = 0.5f,
         .far_clip = 1000.0f,
@@ -85,6 +85,7 @@ int main(void) {
 }
 
 #include "os/linux/wayland/wayland_source_files.h"
+
 #include "os/linux/os_core.c"
 #include "render.c"
 #include "model.c"

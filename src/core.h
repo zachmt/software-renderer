@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
 
 typedef int8_t i8;
 typedef int16_t i16;
@@ -28,22 +27,22 @@ typedef int32_t ExitStatus;
 #define COMPILER_GCC 1
 #endif
 
-#define Swap(type, x, y) do { type _temp_ = (x); (x) = (y); (y) = _temp_; } while(0)
-#define Min(A,B) (((A)<(B))?(A):(B))
-#define Max(A,B) (((A)>(B))?(A):(B))
-#define AlignPow2(x,b) (((x) + (b) - 1)&(~((b) - 1)))
-#define AlignDownPow2(x,b) ((x)&(~((b) - 1)))
-#define AlignPadPow2(x,b)  ((0-(x)) & ((b) - 1))
-#define IsPow2(x) ((x)!=0 && ((x)&((x)-1))==0)
+#define swap(type, x, y) do { type _temp_ = (x); (x) = (y); (y) = _temp_; } while(0)
+#define min(A,B) (((A)<(B))?(A):(B))
+#define max(A,B) (((A)>(B))?(A):(B))
+#define align_pow2(x,b) (((x) + (b) - 1)&(~((b) - 1)))
+#define align_down_pow2(x,b) ((x)&(~((b) - 1)))
+#define align_pad_pow2(x,b)  ((0-(x)) & ((b) - 1))
+#define is_pow2(x) ((x)!=0 && ((x)&((x)-1))==0)
 
-#define Assert(cond) do { assert((cond)); } while(0)
+#define runtime_assert(cond) do { assert((cond)); } while(0)
 
 #if COMPILER_MSVC
-# define AlignOf(T) __alignof(T)
+# define align_of(T) __alignof(T)
 #elif COMPILER_CLANG
-# define AlignOf(T) __alignof(T)
+# define align_of(T) __alignof(T)
 #elif COMPILER_GCC
-# define AlignOf(T) __alignof__(T)
+# define align_of(T) __alignof__(T)
 #endif
 
 static void rng_seed(u32 seed);

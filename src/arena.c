@@ -14,18 +14,18 @@ static Arena *arena_init(void) {
 }
 
 static void *arena_push(Arena *arena, u64 size, u64 alignment) {
-    Assert(IsPow2(alignment));
+    runtime_assert(is_pow2(alignment));
     u8 *unallocated_start = (u8 *)arena->memory_region_start + arena->bytes_allocated;
-    size += AlignPadPow2((u64)unallocated_start, alignment);
-    Assert(arena->bytes_allocated + size < arena->bytes_reserved);
+    size += align_pad_pow2((u64)unallocated_start, alignment);
+    runtime_assert(arena->bytes_allocated + size < arena->bytes_reserved);
     if (arena->bytes_allocated + size > arena->bytes_committed) {
         u8 *uncommitted_start = (u8 *)arena->memory_region_start + arena->bytes_committed;
-        u8 *page_start = (u8 *)AlignDownPow2((u64)uncommitted_start, os_get_pagesize());
+        u8 *page_start = (u8 *)align_down_pow2((u64)uncommitted_start, os_get_pagesize());
         u64 diff = (u64)(uncommitted_start - page_start);
         os_mem_commit(page_start, size + diff);
         arena->bytes_committed += size + diff;
     }
-    void *res = (u8 *)AlignPow2((u64)arena->memory_region_start + arena->bytes_allocated, alignment);
+    void *res = (u8 *)align_pow2((u64)arena->memory_region_start + arena->bytes_allocated, alignment);
     arena->bytes_allocated += size;
     return res;
 }

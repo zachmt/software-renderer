@@ -3,6 +3,7 @@
 #include "maths.h"
 
 #include <stdio.h>
+#include <time.h>
 
 #include "stb_easy_font.h"
 
@@ -43,12 +44,12 @@ static void draw_pixel(RenderState *state, i32 x, i32 y, ColorRGBA color) {
 static void draw_line(RenderState *state, Vec2 a, Vec2 b, ColorRGBA color) {
     bool32 steep = f32_abs(a.x-b.x) < f32_abs(a.y-b.y);
     if (steep) {
-        Swap(f32, a.x, a.y);
-        Swap(f32, b.x, b.y);
+        swap(f32, a.x, a.y);
+        swap(f32, b.x, b.y);
     }
     if (a.x > b.x) {
-        Swap(f32, a.x, b.x);
-        Swap(f32, a.y, b.y);
+        swap(f32, a.x, b.x);
+        swap(f32, a.y, b.y);
     }
     for (i32 x = round_f32_to_i32(a.x); x < round_f32_to_i32(b.x); x++) {
         f32 t = (((f32)x-a.x)) / ((b.x-a.x));
@@ -68,19 +69,19 @@ static f32 signed_triangle_area(Vec3 a, Vec3 b, Vec3 c) {
     Mat2 m = {0};
     m.m00 = b.x - a.x; m.m01 = c.x - a.x;
     m.m10 = b.y - a.y; m.m11 = c.y - a.y;
-    return 0.5f * Mat2Determinant(m);
+    return 0.5f * mat2_determinant(m);
 }
 
 static void draw_triangle(RenderState *state, Vec3 a, Vec3 b, Vec3 c, ColorRGBA color) {
     Vec2 bounding_box[2] = {0};
-    bounding_box[0].x = Min(Min(a.x, b.x), c.x);
-    bounding_box[0].y = Min(Min(a.y, b.y), c.y);
-    bounding_box[1].x = Max(Max(a.x, b.x), c.x);
-    bounding_box[1].y = Max(Max(a.y, b.y), c.y);
+    bounding_box[0].x = min(min(a.x, b.x), c.x);
+    bounding_box[0].y = min(min(a.y, b.y), c.y);
+    bounding_box[1].x = max(max(a.x, b.x), c.x);
+    bounding_box[1].y = max(max(a.y, b.y), c.y);
 
     f32 total_area = signed_triangle_area(a, b, c);
-    for (i32 y = round_f32_to_i32(Min(bounding_box[0].y, bounding_box[1].y)); y <= round_f32_to_i32(Max(bounding_box[0].y, bounding_box[1].y)); y++) {
-        for (i32 x = round_f32_to_i32(Min(bounding_box[0].x, bounding_box[1].x)); x <= round_f32_to_i32(Max(bounding_box[0].x, bounding_box[1].x)); x++) {
+    for (i32 y = round_f32_to_i32(min(bounding_box[0].y, bounding_box[1].y)); y <= round_f32_to_i32(max(bounding_box[0].y, bounding_box[1].y)); y++) {
+        for (i32 x = round_f32_to_i32(min(bounding_box[0].x, bounding_box[1].x)); x <= round_f32_to_i32(max(bounding_box[0].x, bounding_box[1].x)); x++) {
             Vec3 p = {
                 .x = (f32)x,
                 .y = (f32)y,
@@ -92,8 +93,8 @@ static void draw_triangle(RenderState *state, Vec3 a, Vec3 b, Vec3 c, ColorRGBA 
             if (!(alpha < 0.0f || beta < 0.0f || gamma < 0.0f)) {
                 p.z = alpha * a.z + beta * b.z + gamma * c.z;
                 u32 depth_index = (u32)y * state->window_width + (u32)x;
-                Assert(depth_index < state->depth_buffer_len);
-                if (p.z < state->depth_buffer[depth_index]) {
+                runtime_assert(depth_index < state->depth_buffer_len);
+                if (p.z <= state->depth_buffer[depth_index]) {
                     state->depth_buffer[depth_index] = p.z;
                     draw_pixel(state, x, y, color);
                 }
@@ -102,7 +103,7 @@ static void draw_triangle(RenderState *state, Vec3 a, Vec3 b, Vec3 c, ColorRGBA 
     }
 }
 
-static Mat4 get_model_to_world_matrix(Object *obj) {
+static Mat4 get_model_to_world_mat4(Object *obj) {
     Mat4 scale = {0};
     scale.m00 = obj->scale;
     scale.m11 = obj->scale;
@@ -115,21 +116,19 @@ static Mat4 get_model_to_world_matrix(Object *obj) {
     translate.m22 = 1.0f; translate.m23 = obj->position.z;
     translate.m33 = 1.0f;
 
-    Mat4 rotate = QuatToRotationMat4(obj->rotation);
-    // rotate = Mat4Identity();
+    Mat4 rotate = quat_to_rotation_mat4(obj->rotation);
 
-    return Mat4Multiply(translate, Mat4Multiply(rotate, scale));
+    return mat4_multiply(translate, mat4_multiply(rotate, scale));
 }
 
-static Mat4 get_world_to_view_matrix(Camera *cam) {
+static Mat4 get_world_to_view_mat4(Camera *cam) {
     Mat4 translate = {0};
     translate.m00 = 1.0f; translate.m03 = -cam->position.x;
     translate.m11 = 1.0f; translate.m13 = -cam->position.y;
     translate.m22 = 1.0f; translate.m23 = -cam->position.z;
     translate.m33 = 1.0f;
 
-    Mat4 rotate = QuatToRotationMat4(QuatConjugate(cam->rotation));
-    // rotate = Mat4Identity();
+    Mat4 rotate = quat_to_rotation_mat4(quat_conjugate(cam->rotation));
 
     Mat4 basis_change = {0};
     basis_change.m00 = 1.0f;
@@ -137,10 +136,10 @@ static Mat4 get_world_to_view_matrix(Camera *cam) {
     basis_change.m21 = 1.0f;
     basis_change.m33 = 1.0f;
 
-    return Mat4Multiply(basis_change, Mat4Multiply(rotate, translate));
+    return mat4_multiply(basis_change, mat4_multiply(rotate, translate));
 }
 
-static Mat4 get_view_to_clip_matrix(Camera *cam) {
+static Mat4 get_view_to_clip_mat4(Camera *cam) {
     f32 top = cam->near_clip * tangent(cam->fov_y_radians / 2.0f);
     f32 right = top * cam->aspect_ratio;
     Mat4 projection = {0};
@@ -164,13 +163,13 @@ static Vec4 ndc_to_screen(RenderState *state, Vec4 ndc) {
 // Model Space (Vec4) -> World Space (Vec4) -> View Space (Vec4) -> Clip Space (Vec4) -> NDC (Vec3) -> Screen Space (Vec3)
 static void draw_object(RenderState *state, Object *obj) {
     rng_seed(0);
-    Mat4 model_to_world = get_model_to_world_matrix(obj);
+    Mat4 model_to_world = get_model_to_world_mat4(obj);
 
-    Mat4 world_to_view = get_world_to_view_matrix(&state->camera);
-    Mat4 view_to_clip = get_view_to_clip_matrix(&state->camera);
+    Mat4 world_to_view = get_world_to_view_mat4(&state->camera);
+    Mat4 view_to_clip = get_view_to_clip_mat4(&state->camera);
 
-    Mat4 world_to_clip = Mat4Multiply(view_to_clip, world_to_view);
-    Mat4 model_to_clip = Mat4Multiply(world_to_clip, model_to_world);
+    Mat4 world_to_clip = mat4_multiply(view_to_clip, world_to_view);
+    Mat4 model_to_clip = mat4_multiply(world_to_clip, model_to_world);
 
     for (u32 face_index = 0; face_index < obj->model->face_count; face_index++) {
         Face *face = obj->model->faces + face_index;
@@ -178,11 +177,12 @@ static void draw_object(RenderState *state, Object *obj) {
         Vec4 B = obj->model->vertices[face->vertex_indices[1]];
         Vec4 C = obj->model->vertices[face->vertex_indices[2]];
 
-        A = Mat4Vec4Multiply(model_to_clip, A);
-        B = Mat4Vec4Multiply(model_to_clip, B);
-        C = Mat4Vec4Multiply(model_to_clip, C);
+        A = mat4_vec4_multiply(model_to_clip, A);
+        B = mat4_vec4_multiply(model_to_clip, B);
+        C = mat4_vec4_multiply(model_to_clip, C);
 
         // TODO: better clipping
+        ColorRGBA color = random_color();
         if (A.x > -A.w && A.x < A.w &&
                 A.y > -A.w && A.y < A.w &&
                 A.z > -A.w && A.z < A.w &&
@@ -192,9 +192,9 @@ static void draw_object(RenderState *state, Object *obj) {
                 C.x > -C.w && C.x < C.w &&
                 C.y > -C.w && C.y < C.w &&
                 C.z > -C.w && C.z < C.w) {
-            A = Vec4Scale(A, 1.0f / A.w);
-            B = Vec4Scale(B, 1.0f / B.w);
-            C = Vec4Scale(C, 1.0f / C.w);
+            A = vec4_scale(A, 1.0f / A.w);
+            B = vec4_scale(B, 1.0f / B.w);
+            C = vec4_scale(C, 1.0f / C.w);
             A = ndc_to_screen(state, A);
             B = ndc_to_screen(state, B);
             C = ndc_to_screen(state, C);
@@ -203,67 +203,58 @@ static void draw_object(RenderState *state, Object *obj) {
             a.x = A.x; b.x = B.x; c.x = C.x;
             a.y = A.y; b.y = B.y; c.y = C.y;
             a.z = A.z; b.z = B.z; c.z = C.z;
-            draw_triangle(state, a, b, c, random_color());
-        }
-    }
-}
-
-static void draw_text_quad(RenderState *state, Vec2 a, Vec2 b, Vec2 c, Vec2 d, ColorRGBA color) {
-    Vec2 bounding_box[2] = {0};
-    bounding_box[0].x = Min(Min(Min(a.x, b.x), c.x), d.x);
-    bounding_box[0].y = Min(Min(Min(a.y, b.y), c.y), d.y);
-    bounding_box[1].x = Max(Max(Max(a.x, b.x), c.x), d.x);
-    bounding_box[1].y = Max(Max(Max(a.y, b.y), c.y), d.y);
-
-
-    for (i32 y = round_f32_to_i32(Min(bounding_box[0].y, bounding_box[1].y)); y <= round_f32_to_i32(Max(bounding_box[0].y, bounding_box[1].y)); y++) {
-        for (i32 x = round_f32_to_i32(Min(bounding_box[0].x, bounding_box[1].x)); x <= round_f32_to_i32(Max(bounding_box[0].x, bounding_box[1].x)); x++) {
-            draw_pixel(state, x, y, color);
+            draw_triangle(state, a, b, c, color);
         }
     }
 }
 
 static void render_2d_text(RenderState *state, Vec2 offset, char *str) {
-    EasyFontVertex vb[500 * sizeof(EasyFontVertex) * 4];
-    stb_easy_font_spacing(1);
-    i32 num_quads = stb_easy_font_print(offset.x, offset.y, str, NULL, vb,sizeof(vb));
+    EasyFontVertex vb[1000 * sizeof(EasyFontVertex) * 4];
+    stb_easy_font_spacing(-0.5f);
+    i32 num_quads = stb_easy_font_print(offset.x, offset.y, str, NULL, vb, sizeof(vb));
     const f32 scale = 2.0f;
     for (i32 i = 0; i < num_quads * 4; i+=4) {
-        Vec2 a = {
+        Vec3 a = {
             .x = vb[i].x * scale,
             .y = vb[i].y * scale,
         };
-        Vec2 b = {
+        Vec3 b = {
             .x = vb[i+1].x * scale,
             .y = vb[i+1].y * scale,
         };
-        Vec2 c = {
+        Vec3 c = {
             .x = vb[i+2].x * scale,
             .y = vb[i+2].y * scale,
         };
-        Vec2 d = {
+        Vec3 d = {
             .x = vb[i+3].x * scale,
             .y = vb[i+3].y * scale,
         };
-        draw_text_quad(state, a,b,c,d, white);
+        draw_triangle(state, a, b, c, white);
+        draw_triangle(state, c, d, a, white);
     }
 }
 
 
 static void update_and_render(RenderState *state) {
-    const f32 max_camera_speed = 1.0f;
-    Assert(state->window_width * state->window_height <= state->frame_buffer_len);
-    // printf("left_right %f\n", state->controls.left_right);
-    // printf("forward_backward %f\n", state->controls.forward_backward);
+    runtime_assert(state->window_width * state->window_height <= state->frame_buffer_len);
     state->camera.aspect_ratio = (f32)state->window_width / (f32)state->window_height;
     state->camera.position.x += 0.01f * state->controls.left_right;
     state->camera.position.y += 0.01f * state->controls.forward_backward;
     state->camera.position.z += 0.01f * state->controls.up_down;
 
-
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC,&start);
     clear_frame_buffer(state, black);
     reset_depth_buffer(state);
     draw_object(state, state->obj);
-    render_2d_text(state, (Vec2){.x=20,.y=20},"hello world");
+    clock_gettime(CLOCK_MONOTONIC,&end);
+
+    i64 s = end.tv_sec - start.tv_sec;
+    i64 ns = end.tv_nsec - start.tv_nsec;
+    f64 ms = (f64)s * 1000.0 + 0.000001 * (f64)ns;
+    char debug_text[1000] = {0};
+    snprintf(debug_text, 1000, "Camera pos (%f, %f, %f)\n%f ms", (f64)state->camera.position.x, (f64)state->camera.position.y, (f64)state->camera.position.z, ms);
+    render_2d_text(state, vec2_zero, debug_text);
 }
 

@@ -66,7 +66,7 @@ static Model *mesh_from_obj(Arena *arena, char *file_path) {
         return 0;
     }
 
-    Model *mesh = (Model *)arena_push(arena, sizeof(Model), AlignOf(Model));
+    Model *mesh = (Model *)arena_push(arena, sizeof(Model), align_of(Model));
     mesh->vertex_count = 0;
     mesh->texture_vertex_count = 0;
     mesh->vertex_normals_count = 0;
@@ -86,10 +86,10 @@ static Model *mesh_from_obj(Arena *arena, char *file_path) {
     }
     rewind(obj_file);
 
-    mesh->vertices = (Vec4 *)arena_push(arena, sizeof(Vec4) * mesh->vertex_count, AlignOf(Vec4));
-    mesh->texture_vertices = (Vec3 *)arena_push(arena, sizeof(Vec3) * mesh->texture_vertex_count, AlignOf(Vec3));
-    mesh->vertex_normals = (Vec3 *)arena_push(arena, sizeof(Vec3) * mesh->vertex_normals_count, AlignOf(Vec3));
-    mesh->faces = (Face *)arena_push(arena, sizeof(Face) * mesh->face_count, AlignOf(Face));
+    mesh->vertices = (Vec4 *)arena_push(arena, sizeof(Vec4) * mesh->vertex_count, align_of(Vec4));
+    mesh->texture_vertices = (Vec3 *)arena_push(arena, sizeof(Vec3) * mesh->texture_vertex_count, align_of(Vec3));
+    mesh->vertex_normals = (Vec3 *)arena_push(arena, sizeof(Vec3) * mesh->vertex_normals_count, align_of(Vec3));
+    mesh->faces = (Face *)arena_push(arena, sizeof(Face) * mesh->face_count, align_of(Face));
 
     Vec4 *current_vertex = mesh->vertices;
     Face *current_face = mesh->faces;
