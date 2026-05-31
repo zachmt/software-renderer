@@ -25,7 +25,7 @@ typedef union {
 } ColorRGBAf;
 
 typedef struct {
-    Vec3 position;
+    Vec4 position;
     Quat rotation;
     f32 fov_y_radians;
     f32 near_clip;
@@ -44,8 +44,9 @@ typedef struct {
     f32 forward_backward;
     f32 left_right;
     f32 up_down;
-    f32 look_horizontal;
-    f32 look_vertical;
+    f32 look_roll;
+    f32 look_pitch;
+    f32 look_yaw;
 } Controls;
 
 typedef struct {
@@ -68,4 +69,4 @@ typedef struct {
     Controls controls;
 } RenderState;
 
-static void update_and_render(RenderState *state);
+static void update_and_render(RenderState *state, f32 dt);

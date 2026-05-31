@@ -31,8 +31,8 @@ static f32 vec2_dot_product(Vec2 v, Vec2 w);
 static f32 vec2_magnitude(Vec2 v);
 
 #define vec2_zero ((Vec2){.x=0.0f,.y=0.0f})
-#define vec2_ihat ((Vec4){.x=1.0f,.y=0.0f})
-#define vec2_jhat ((Vec4){.x=0.0f,.y=1.0f})
+#define vec2_ihat ((Vec2){.x=1.0f,.y=0.0f})
+#define vec2_jhat ((Vec2){.x=0.0f,.y=1.0f})
 
 typedef union{
     struct {
@@ -65,6 +65,7 @@ typedef union{
     };
     f32 v[4];
 } Vec4;
+static Vec4 vec4_add(Vec4 v, Vec4 w);
 static Vec4 vec4_from_vec3(Vec3 v, f32 w);
 static Vec4 vec4_normalize(Vec4 v);
 static Vec4 vec4_scale(Vec4 v, f32 n);
@@ -144,6 +145,7 @@ typedef union{
 static Mat4 quat_to_rotation_mat4(Quat q);
 static Quat quat_conjugate(Quat q);
 static Quat quat_from_axis_angle(f32 angle, Vec3 axis);
+static Quat quat_multiply(Quat q, Quat r);
 static Quat quat_normalize(Quat q);
 static f32 quat_magnitude(Quat q);
 

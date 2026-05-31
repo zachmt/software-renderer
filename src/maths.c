@@ -123,6 +123,15 @@ static f32 vec3_magnitude(Vec3 v) {
 }
 
 // --- Vec4 ---
+static Vec4 vec4_add(Vec4 v, Vec4 w) {
+    return (Vec4){
+        .x = v.x + w.x,
+        .y = v.y + w.y,
+        .z = v.z + w.z,
+        .w = w.w + w.w,
+    };
+}
+
 static Vec4 vec4_from_vec3(Vec3 v, f32 w) {
     return (Vec4){
         .x = v.x,
@@ -238,11 +247,12 @@ static Vec4 mat4_vec4_multiply(Mat4 m, Vec4 v) {
 
 // --- Quat ---
 static Mat4 quat_to_rotation_mat4(Quat q) {
-    f32 s = 1.0f / sqrtf(quat_magnitude(q));
+    f32 magnitude = quat_magnitude(q);
+    f32 s = 1.0f / (magnitude * magnitude) ;
     return (Mat4){
-        .m00 = 1.0f - 2.0f * s * (q.c * q.c + q.d * q.d),  .m01 = 2.0f * s * (q.b * q.c - q.d * q.a),        .m02 = 2.0f * s * (q.b * q.d + q.c * q.a),
-        .m10 = 2.0f * s * (q.b * q.c + q.a * q.d),         .m11 = 1.0f - 2.0f * s * (q.b * q.b + q.d * q.d), .m12 = 2.0f * s * (q.c * q.d - q.a * q.b),
-        .m20 = 2.0f * s * (q.b * q.d - q.a * q.c),         .m21 = 2.0f * s * (q.c * q.d + q.a * q.b),        .m22 = 1.0f - 2.0f * s * (q.b * q.b + q.c * q.b),
+        .m00 = 1.0f - 2.0f * s * (q.y * q.y + q.z * q.z),  .m01 = 2.0f * s * (q.x * q.y - q.z * q.w),        .m02 = 2.0f * s * (q.x * q.z + q.y * q.w),
+        .m10 = 2.0f * s * (q.x * q.y + q.w * q.z),         .m11 = 1.0f - 2.0f * s * (q.x * q.x + q.z * q.z), .m12 = 2.0f * s * (q.y * q.z - q.w * q.x),
+        .m20 = 2.0f * s * (q.x * q.z - q.w * q.y),         .m21 = 2.0f * s * (q.y * q.z + q.w * q.x),        .m22 = 1.0f - 2.0f * s * (q.x * q.x + q.y * q.y),
         .m33 = 1.0f,
     };
 }
@@ -266,6 +276,15 @@ static Quat quat_from_axis_angle(f32 angle, Vec3 axis) {
     q.y = sinf(angle / 2.0f)*cosf(beta_y);
     q.z = sinf(angle / 2.0f)*cosf(beta_z);
     return quat_normalize(q);
+}
+
+static Quat quat_multiply(Quat q, Quat r) {
+    return (Quat){
+        .w = q.w * r.w - q.x * r.x - q.y * r.y - q.z * r.z,
+        .x = q.w * r.x + q.x * r.w + q.y * r.z - q.z * r.y,
+        .y = q.w * r.y - q.x * r.z + q.y * r.w + q.z * r.x,
+        .z = q.w * r.z + q.x * r.y - q.y * r.x + q.z * r.w,
+    };
 }
 
 static Quat quat_normalize(Quat q) {
