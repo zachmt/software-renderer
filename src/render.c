@@ -30,7 +30,7 @@ static void clear_frame_buffer(RenderState *state, ColorRGBA color) {
 
 static void reset_depth_buffer(RenderState *state) {
     for (u32 i = 0; i < state->depth_buffer_len; i++) {
-        state->depth_buffer[i] = neg_inf32();
+        state->depth_buffer[i] = f32_neg_inf();
     }
 }
 
@@ -51,9 +51,9 @@ static void draw_line(RenderState *state, Vec2 a, Vec2 b, ColorRGBA color) {
         swap(f32, a.x, b.x);
         swap(f32, a.y, b.y);
     }
-    for (i32 x = round_f32_to_i32(a.x); x < round_f32_to_i32(b.x); x++) {
+    for (i32 x = f32_round_to_i32(a.x); x < f32_round_to_i32(b.x); x++) {
         f32 t = (((f32)x-a.x)) / ((b.x-a.x));
-        i32 y = round_f32_to_i32(a.y + (b.y-a.y) * t);
+        i32 y = f32_round_to_i32(a.y + (b.y-a.y) * t);
         if (steep) {
             draw_pixel(state, y, x, color);
         } else {
@@ -73,15 +73,15 @@ static f32 signed_triangle_area(Vec3 a, Vec3 b, Vec3 c) {
 }
 
 static void draw_triangle(RenderState *state, Vec3 a, Vec3 b, Vec3 c, ColorRGBA color) {
-    Vec2 bounding_box[2] = {0};
-    bounding_box[0].x = min(min(a.x, b.x), c.x);
-    bounding_box[0].y = min(min(a.y, b.y), c.y);
-    bounding_box[1].x = max(max(a.x, b.x), c.x);
-    bounding_box[1].y = max(max(a.y, b.y), c.y);
+    i32 minx, miny, maxx, maxy;
+    minx = f32_round_to_i32(min(min(a.x, b.x), c.x));
+    miny = f32_round_to_i32(min(min(a.y, b.y), c.y));
+    maxx = f32_round_to_i32(max(max(a.x, b.x), c.x));
+    maxy = f32_round_to_i32(max(max(a.y, b.y), c.y));
 
     f32 total_area = signed_triangle_area(a, b, c);
-    for (i32 y = round_f32_to_i32(min(bounding_box[0].y, bounding_box[1].y)); y <= round_f32_to_i32(max(bounding_box[0].y, bounding_box[1].y)); y++) {
-        for (i32 x = round_f32_to_i32(min(bounding_box[0].x, bounding_box[1].x)); x <= round_f32_to_i32(max(bounding_box[0].x, bounding_box[1].x)); x++) {
+    for (i32 y = max(0, miny); y <= min((i32)state->window_height-1, maxy); y++) {
+        for (i32 x = max(0, minx); x <= min((i32)state->window_width-1, maxx); x++) {
             Vec3 p = {
                 .x = (f32)x,
                 .y = (f32)y,
@@ -140,7 +140,7 @@ static Mat4 get_world_to_view_mat4(Camera *cam) {
 }
 
 static Mat4 get_view_to_clip_mat4(Camera *cam) {
-    f32 top = cam->near_clip * tangent(cam->fov_y_radians / 2.0f);
+    f32 top = cam->near_clip * f32_tan(cam->fov_y_radians / 2.0f);
     f32 right = top * cam->aspect_ratio;
     Mat4 projection = {0};
     projection.m00 = cam->near_clip / right;
@@ -151,13 +151,43 @@ static Mat4 get_view_to_clip_mat4(Camera *cam) {
     return projection;
 }
 
-static Vec4 ndc_to_screen(RenderState *state, Vec4 ndc) {
-    Vec4 res = {0};
-    res.x = (ndc.x * 0.5f + 0.5f) * (f32)state->window_width;
-    res.y = (-ndc.y * 0.5f + 0.5f) * (f32)state->window_height;
-    res.z = ndc.z;
-    res.w = 1.0f;
-    return res;
+static Vec3 ndc_to_screen(RenderState *state, Vec4 ndc) {
+    return (Vec3){
+        .x = (ndc.x * 0.5f + 0.5f) * (f32)state->window_width,
+        .y = (-ndc.y * 0.5f + 0.5f) * (f32)state->window_height,
+        .z = ndc.z,
+    };
+}
+
+static void rasterize_triangle(RenderState *state, Vec4 A, Vec4 B, Vec4 C) { // TODO: add fragment shader function pointer?
+    ColorRGBA color = random_color();
+
+    if (
+            A.x < A.w && A.x > -A.w &&
+            A.y < A.w && A.y > -A.w &&
+            A.z < A.w && A.z > -A.w &&
+            B.x < B.w && B.x > -B.w &&
+            B.y < B.w && B.y > -B.w &&
+            B.z < B.w && B.z > -B.w &&
+            C.x < C.w && C.x > -C.w &&
+            C.y < C.w && C.y > -C.w &&
+            C.z < C.w && C.z > -C.w
+       ) {
+
+        // Clip -> NDC
+        A = vec4_scale(A, 1.0f / A.w);
+        B = vec4_scale(B, 1.0f / B.w);
+        C = vec4_scale(C, 1.0f / C.w);
+
+
+        // NDC -> screen
+        Vec3 a = ndc_to_screen(state, A);
+        Vec3 b = ndc_to_screen(state, B);
+        Vec3 c = ndc_to_screen(state, C);
+
+
+        draw_triangle(state, a, b, c, color);
+    }
 }
 
 // Model Space (Vec4) -> World Space (Vec4) -> View Space (Vec4) -> Clip Space (Vec4) -> NDC (Vec3) -> Screen Space (Vec3)
@@ -173,38 +203,15 @@ static void draw_object(RenderState *state, Object *obj) {
 
     for (u32 face_index = 0; face_index < obj->model->face_count; face_index++) {
         Face *face = obj->model->faces + face_index;
-        Vec4 A = obj->model->vertices[face->vertex_indices[0]];
-        Vec4 B = obj->model->vertices[face->vertex_indices[1]];
-        Vec4 C = obj->model->vertices[face->vertex_indices[2]];
+        Vec4 A = obj->model->mesh_vertices[face->vertex_indices[0]];
+        Vec4 B = obj->model->mesh_vertices[face->vertex_indices[1]];
+        Vec4 C = obj->model->mesh_vertices[face->vertex_indices[2]];
 
         A = mat4_vec4_multiply(model_to_clip, A);
         B = mat4_vec4_multiply(model_to_clip, B);
         C = mat4_vec4_multiply(model_to_clip, C);
 
-        // TODO: better clipping
-        ColorRGBA color = random_color();
-        if (A.x > -A.w && A.x < A.w &&
-                A.y > -A.w && A.y < A.w &&
-                A.z > -A.w && A.z < A.w &&
-                B.x > -B.w && B.x < B.w &&
-                B.y > -B.w && B.y < B.w &&
-                B.z > -B.w && B.z < B.w &&
-                C.x > -C.w && C.x < C.w &&
-                C.y > -C.w && C.y < C.w &&
-                C.z > -C.w && C.z < C.w) {
-            A = vec4_scale(A, 1.0f / A.w);
-            B = vec4_scale(B, 1.0f / B.w);
-            C = vec4_scale(C, 1.0f / C.w);
-            A = ndc_to_screen(state, A);
-            B = ndc_to_screen(state, B);
-            C = ndc_to_screen(state, C);
-
-            Vec3 a, b, c;
-            a.x = A.x; b.x = B.x; c.x = C.x;
-            a.y = A.y; b.y = B.y; c.y = C.y;
-            a.z = A.z; b.z = B.z; c.z = C.z;
-            draw_triangle(state, a, b, c, color);
-        }
+        rasterize_triangle(state, A, B,C);
     }
 }
 
@@ -241,7 +248,7 @@ static void render_2d_text(RenderState *state, Vec2 offset, char *str) {
 
 static void update_camera(RenderState *state, f32 dt) {
     state->camera.aspect_ratio = (f32)state->window_width / (f32)state->window_height;
-    f32 movement_speed = 1.0f; // meters per second
+    f32 movement_speed = 10.0f; // meters per second
     Vec4 view_delta = {
         .x = state->controls.left_right,
         .y = state->controls.up_down,
@@ -267,9 +274,9 @@ static void update_camera(RenderState *state, f32 dt) {
     f32 roll_input = state->controls.look_roll;
     f32 pitch_input = state->controls.look_pitch;
     f32 yaw_input = state->controls.look_yaw;
-    f32 roll_speed = 2.0f * PI32; // radians per second
-    f32 pitch_speed = 2.0f * PI32; // radians per second
-    f32 yaw_speed = 2.0f * PI32; // radians per second
+    f32 roll_speed = 2.0f * f32_pi; // radians per second
+    f32 pitch_speed = 2.0f * f32_pi; // radians per second
+    f32 yaw_speed = 2.0f * f32_pi; // radians per second
     
     f32 roll_angle = roll_input * roll_speed * dt;
     f32 pitch_angle = pitch_input * pitch_speed * dt;

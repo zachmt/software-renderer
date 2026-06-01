@@ -19,8 +19,8 @@ wayland_protocols=(
 	"staging/pointer-warp/pointer-warp-v1"
 )
 
-wayland_source_destination="src/os/linux/wayland/src"
-wayland_header_destination="src/os/linux/wayland/include"
+wayland_source_destination="src/gen/wayland/src"
+wayland_header_destination="src/gen/wayland/include"
 mkdir -p "$wayland_source_destination" "$wayland_header_destination"
 
 for protocol in "${wayland_protocols[@]}"; do
@@ -32,7 +32,7 @@ for protocol in "${wayland_protocols[@]}"; do
 	wayland-scanner client-header "$xml_path" "$header_path"
 done
 
-wayland_source_files_header_path="src/os/linux/wayland/wayland_source_files.h"
+wayland_source_files_header_path="src/gen/wayland/wayland_source_files.h"
 printf "#pragma once\n" > "$wayland_source_files_header_path"
 for file in "$wayland_source_destination"/*.c; do
 	printf "#include \"%s\"\n" "$(basename "$file")" >> "$wayland_source_files_header_path"

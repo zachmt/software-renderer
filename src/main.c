@@ -1,10 +1,9 @@
 #define RGFW_IMPLEMENTATION
 #include "RGFW.h"
 
-#include "arena.h"
 #include "core.h"
 #include "maths.h"
-#include "model.h"
+#include "assets.h"
 #include "render.h"
 
 RenderState *init_state(Arena *arena, u32 window_width, u32 window_height);
@@ -21,10 +20,10 @@ RenderState *init_state(Arena *arena, u32 window_width, u32 window_height) {
     state->obj->scale = 1.0f;
     state->obj->position = (Vec3){.x = 0.0f, .y = 0.0f, .z = 0.0f};
     state->obj->rotation = quat_identity;
-    state->obj->model = mesh_from_obj(state->arena, "res/model.obj");
+    state->obj->model = model_from_obj(state->arena, "res/model.obj");
     state->camera.position = (Vec4){.x = 0.0f, .y = 0.0f, .z = 0.0f, .w = 1.0f};
     state->camera.rotation = quat_identity;
-    state->camera.fov_y_radians = (40.0f) * (PI32 / 180.0f);
+    state->camera.fov_y_radians = (40.0f) * (f32_pi / 180.0f);
     state->camera.near_clip = 0.5f;
     state->camera.far_clip = 1000.0f;
     state->camera.aspect_ratio = (f32)state->window_width / (f32)state->window_height;
@@ -127,11 +126,10 @@ int main(void) {
     RGFW_window_close(window);
 }
 
-#include "os/linux/wayland/wayland_source_files.h"
+#include "gen/wayland/wayland_source_files.h"
 
-#include "os/linux/os_core.c"
+#include "os_linux.c"
 #include "render.c"
-#include "model.c"
+#include "assets.c"
 #include "core.c"
-#include "arena.c"
 #include "maths.c"

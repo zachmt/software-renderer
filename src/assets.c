@@ -1,5 +1,4 @@
-#include "model.h"
-#include "arena.h"
+#include "assets.h"
 #include "core.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -60,39 +59,39 @@ static Face parse_face(char *input) {
     return face;
 }
 
-static Model *mesh_from_obj(Arena *arena, char *file_path) {
+static Model *model_from_obj(Arena *arena, char *file_path) {
     FILE *obj_file = fopen(file_path, "r");
     if (obj_file == 0) {
         return 0;
     }
 
-    Model *mesh = (Model *)arena_push(arena, sizeof(Model), align_of(Model));
-    mesh->vertex_count = 0;
-    mesh->texture_vertex_count = 0;
-    mesh->vertex_normals_count = 0;
-    mesh->face_count = 0;
+    Model *model = (Model *)arena_push(arena, sizeof(Model), align_of(Model));
+    model->mesh_vertex_count = 0;
+    model->texture_vertex_count = 0;
+    model->vertex_normals_count = 0;
+    model->face_count = 0;
 
     char line_buf[1024];
     while (fgets(line_buf, 1024, obj_file)) {
         if (line_buf[0] == 'v' && line_buf[1] == ' ') {
-            mesh->vertex_count++;
+            model->mesh_vertex_count++;
         } else if (line_buf[0] == 'v' && line_buf[1] == 't') {
-            mesh->texture_vertex_count++;
+            model->texture_vertex_count++;
         } else if (line_buf[0] == 'v' && line_buf[1] == 'n') {
-            mesh->vertex_normals_count++;
+            model->vertex_normals_count++;
         } else if(line_buf[0] == 'f') {
-            mesh->face_count++;
+            model->face_count++;
         }
     }
     rewind(obj_file);
 
-    mesh->vertices = (Vec4 *)arena_push(arena, sizeof(Vec4) * mesh->vertex_count, align_of(Vec4));
-    mesh->texture_vertices = (Vec3 *)arena_push(arena, sizeof(Vec3) * mesh->texture_vertex_count, align_of(Vec3));
-    mesh->vertex_normals = (Vec3 *)arena_push(arena, sizeof(Vec3) * mesh->vertex_normals_count, align_of(Vec3));
-    mesh->faces = (Face *)arena_push(arena, sizeof(Face) * mesh->face_count, align_of(Face));
+    model->mesh_vertices = (Vec4 *)arena_push(arena, sizeof(Vec4) * model->mesh_vertex_count, align_of(Vec4));
+    model->texture_vertices = (Vec3 *)arena_push(arena, sizeof(Vec3) * model->texture_vertex_count, align_of(Vec3));
+    model->vertex_normals = (Vec3 *)arena_push(arena, sizeof(Vec3) * model->vertex_normals_count, align_of(Vec3));
+    model->faces = (Face *)arena_push(arena, sizeof(Face) * model->face_count, align_of(Face));
 
-    Vec4 *current_vertex = mesh->vertices;
-    Face *current_face = mesh->faces;
+    Vec4 *current_vertex = model->mesh_vertices;
+    Face *current_face = model->faces;
     while (fgets(line_buf, 1024, obj_file)) {
         if (line_buf[0] == 'v' && line_buf[1] == ' ') {
             *current_vertex = parse_vertex(line_buf);
@@ -108,5 +107,5 @@ static Model *mesh_from_obj(Arena *arena, char *file_path) {
     }
 
     fclose(obj_file);
-    return mesh;
+    return model;
 }

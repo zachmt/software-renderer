@@ -2,33 +2,22 @@
 #include <math.h>
 #include <stdlib.h>
 
-static f32 tangent(f32 radians) {
+static f32 f32_tan(f32 radians) {
     return tanf(radians);
 }
 
-static f32 inf32(void) {
+static f32 f32_inf(void) {
     u32 bits = 0x7f800000;
     return *(f32 *)&bits;
 }
 
-static f32 neg_inf32(void) {
+static f32 f32_neg_inf(void) {
     u32 bits = 0xff800000;
     return *(f32 *)&bits;
 }
 
-static i32 round_f32_to_i32(f32 x) {
+static i32 f32_round_to_i32(f32 x) {
     return (i32)lroundf(x);
-}
-
-static u64 round_down(u64 x, u64 multiple) {
-    runtime_assert(multiple != 0);
-    return x - (x % multiple);
-}
-
-static u64 round_up(u64 x, u64 multiple) {
-    runtime_assert(multiple != 0);
-    u64 remainder = x % multiple;
-    return (remainder == 0) ? x : x + multiple - remainder;
 }
 
 static i32 i32_abs(i32 x) {
@@ -39,6 +28,14 @@ static f32 f32_abs(f32 x) {
 }
 
 // --- Vec2 ---
+
+static Vec2 vec2_from_vec3(Vec3 v) {
+    return (Vec2){
+        .x = v.x,
+        .y = v.y,
+    };
+}
+
 static Vec2 vec2_normalize(Vec2 v) {
     return vec2_scale(v, 1.0f / vec2_magnitude(v));
 }
@@ -78,6 +75,7 @@ static f32 vec2_magnitude(Vec2 v) {
 }
 
 // --- Vec3 ---
+
 static Vec3 vec3_cross_product(Vec3 v, Vec3 w) {
     return (Vec3){
         .x = v.y * w.z + v.z + w.y,
@@ -91,6 +89,14 @@ static Vec3 vec3_from_vec2(Vec2 v, f32 z) {
         .x = v.x,
         .y = v.y,
         .z = z,
+    };
+}
+
+static Vec3 vec3_from_vec4(Vec4 v) {
+    return (Vec3){
+        .x = v.x,
+        .y = v.y,
+        .z = v.z,
     };
 }
 
@@ -123,6 +129,7 @@ static f32 vec3_magnitude(Vec3 v) {
 }
 
 // --- Vec4 ---
+
 static Vec4 vec4_add(Vec4 v, Vec4 w) {
     return (Vec4){
         .x = v.x + w.x,
@@ -167,6 +174,7 @@ static f32 vec4_magnitude(Vec4 v) {
 }
 
 // --- Mat2 ---
+
 static Mat2 mat2_multiply(Mat2 m, Mat2 n) {
     return (Mat2){
         .m00 = m.m00 * n.m00 + m.m01 * n.m10, .m01 = m.m00 * n.m01 + m.m01 * n.m11,
@@ -193,6 +201,7 @@ static f32 mat2_determinant(Mat2 m) {
 }
 
 // --- Mat3 ---
+
 static Mat3 mat3_multiply(Mat3 m, Mat3 n) {
     return (Mat3){
         .m00 = m.m00 * n.m00 + m.m01 * n.m10 + m.m02 * n.m20, .m01 = m.m00 * n.m01 + m.m01 * n.m11 + m.m02 * n.m21, .m02 = m.m00 * n.m02 + m.m01 * n.m12 + m.m02 * n.m22,
@@ -218,6 +227,7 @@ static Vec3 mat3_vec3_multiply(Mat3 m, Vec3 v) {
 }
 
 // --- Mat4 ---
+
 static Mat4 mat4_multiply(Mat4 m, Mat4 n) {
     return (Mat4){
         .m00 = m.m00 * n.m00 + m.m01 * n.m10 + m.m02 * n.m20 + m.m03 * n.m30, .m01 = m.m00 * n.m01 + m.m01 * n.m11 + m.m02 * n.m21 + m.m03 * n.m31, .m02 = m.m00 * n.m02 + m.m01 * n.m12 + m.m02 * n.m22 + m.m03 * n.m32, .m03 = m.m00 * n.m03 + m.m01 * n.m13 + m.m02 * n.m23 + m.m03 * n.m33,
@@ -246,6 +256,7 @@ static Vec4 mat4_vec4_multiply(Mat4 m, Vec4 v) {
 }
 
 // --- Quat ---
+
 static Mat4 quat_to_rotation_mat4(Quat q) {
     f32 magnitude = quat_magnitude(q);
     f32 s = 1.0f / (magnitude * magnitude) ;
@@ -288,12 +299,12 @@ static Quat quat_multiply(Quat q, Quat r) {
 }
 
 static Quat quat_normalize(Quat q) {
-    f32 factor = 1.0f / quat_magnitude(q);
+    f32 magnitude = quat_magnitude(q);
     return (Quat){
-        .w = q.w * factor,
-        .x = q.x * factor,
-        .y = q.y * factor,
-        .z = q.z * factor,
+        .w = q.w / magnitude,
+        .x = q.x / magnitude,
+        .y = q.y / magnitude,
+        .z = q.z / magnitude,
     };
 }
 
