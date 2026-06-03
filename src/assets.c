@@ -1,111 +1,107 @@
 #include "assets.h"
 #include "core.h"
+#include "os.h"
+#include "render.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
-static Vec4 parse_vertex(char *input) {
-    char *num_start = 0;
-    u32 index = 0;
-    Vec4 res = {0};
-    res.w = 1;
-    while(*input != '\n' && *input != '\0' && index <= 3) {
-        if ((*input >= '0' && *input <= '9') || *input == '-') {
-            num_start = input;
-            while((*input >= '0' && *input <= '9') || *input == '.' || *input == '-') {
-                input++;
-            }
-            *input = '\0';
-            res.v[index] = (f32)atof(num_start);
-            index++;
+static Model *model_from_obj(Arena *arena, Str8 file_path) {
+    Arena scratch = {0};
+    Model *res = arena_push_struct(arena, Model);
+
+    Str8 contents = os_read_entire_file(&scratch, file_path);
+    // println(contents);
+    Str8Node *tokens = str8_split(&scratch, contents, ws_delims);
+
+    // Pre-pass to get size of arrays needed and trim
+    Str8Node *curr = tokens;
+    while (curr) {
+        curr->str = str8_trim(curr->str);
+        if (str8_equal(curr->str, s("f"))) {
+            res->face_count++;
+        } else if (str8_equal(curr->str, s("vt"))) {
+            res->texture_vertex_count++;
+        } else if (str8_equal(curr->str, s("vn"))) {
+            res->vertex_normals_count++;
+        } else if (str8_equal(curr->str, s("v"))) {
+            res->mesh_vertex_count++;
         }
-        input++;
+        curr = curr->next;
     }
+
+    res->faces = arena_push_array(arena, Face, res->face_count);
+    res->texture_vertices = arena_push_array(arena, Vec3, res->texture_vertex_count);
+    res->vertex_normals = arena_push_array(arena, Vec3, res->vertex_normals_count);
+    res->mesh_vertices = arena_push_array(arena, Vec4, res->mesh_vertex_count);
+
+    u32 mesh_vertex_index = 0;
+    u32 texture_vertex_index = 0;
+    u32 vertex_normal_index = 0;
+    u32 face_index = 0;
+    curr = tokens;
+    while (curr) {
+        if (str8_equal(curr->str, s("f"))) {
+            curr = curr->next;
+            // TODO: handle more than 3 vertices (quads)
+            // TODO: handle other formats (e.g. 1//2, 3/1, 1 2 3, etc.)
+            res->faces[face_index].flags = FACE_NORMALS | FACE_POSITIONS | FACE_TEXCOORDS;
+            for (u32 vert = 0; vert < 3; vert++) {
+                Str8Node *nums = str8_split(&scratch, curr->str, s("/"));
+                res->faces[face_index].vertex_indices[vert] = (u32)str8_parse_i32(nums->str)-1;
+                nums=nums->next;
+                res->faces[face_index].texture_indices[vert] = (u32)str8_parse_i32(nums->str)-1;
+                nums=nums->next;
+                res->faces[face_index].normal_indices[vert] = (u32)str8_parse_i32(nums->str)-1;
+                curr = curr->next;
+            }
+
+            // Face f = res->faces[face_index];
+            // printf("Face[%u]:\t", face_index);
+            // printf("%u/%u/%u\t", f.vertex_indices[0], f.texture_indices[0], f.normal_indices[0]);
+            // printf("%u/%u/%u\t", f.vertex_indices[1], f.texture_indices[1], f.normal_indices[1]);
+            // printf("%u/%u/%u\n", f.vertex_indices[2], f.texture_indices[2], f.normal_indices[2]);
+
+            face_index++;
+        } else if (str8_equal(curr->str, s("vt"))) {
+            curr = curr->next;
+            res->texture_vertices[texture_vertex_index].x = str8_parse_f32(curr->str);
+            curr = curr->next;
+            res->texture_vertices[texture_vertex_index].y = str8_parse_f32(curr->str); // TODO: handle case of optional v
+            curr = curr->next;
+            res->texture_vertices[texture_vertex_index].z = str8_parse_f32(curr->str); // TODO: handle case of optional w
+            texture_vertex_index++;
+            curr = curr->next;
+        } else if (str8_equal(curr->str, s("vn"))) {
+            curr = curr->next;
+            res->vertex_normals[vertex_normal_index].x = str8_parse_f32(curr->str);
+            curr = curr->next;
+            res->vertex_normals[vertex_normal_index].y = str8_parse_f32(curr->str);
+            curr = curr->next;
+            res->vertex_normals[vertex_normal_index].z = str8_parse_f32(curr->str);
+            vertex_normal_index++;
+            curr = curr->next;
+        } else if (str8_equal(curr->str, s("v"))) {
+            curr = curr->next;
+            res->mesh_vertices[mesh_vertex_index].x = str8_parse_f32(curr->str);
+            curr = curr->next;
+            res->mesh_vertices[mesh_vertex_index].y = str8_parse_f32(curr->str);
+            curr = curr->next;
+            res->mesh_vertices[mesh_vertex_index].z = str8_parse_f32(curr->str);
+            // curr = curr->next;
+            res->mesh_vertices[mesh_vertex_index].w = 1.0f; // TODO: handle case of explicit w coordinate
+
+            // Vec4 v = res->mesh_vertices[mesh_vertex_index];
+            // printf("Vertex[%u]:\t", mesh_vertex_index);
+            // printf("%f\t%f\t%f\n", v.x, v.y, v.z);
+
+            mesh_vertex_index++;
+            curr = curr->next;
+        } else {
+            curr = curr->next;
+        }
+    }
+
+    arena_destroy(&scratch);
     return res;
-}
-
-static Face parse_face(char *input) {
-    char *num_start = 0;
-    Face face = {0};
-    face.flags = FACE_POSITIONS | FACE_TEXCOORDS | FACE_NORMALS;
-    u32 index = 0;
-    u32 type = 0;
-    while(*input != '\n' && *input != '\0' && index <= 2) {
-        if ((*input >= '0' && *input <= '9') || *input == '-') {
-            num_start = input;
-            while((*input >= '0' && *input <= '9') || *input == '-') {
-                input++;
-            }
-            *input = '\0';
-            switch (type) {
-                // TODO: support negative indices
-                case 0: {
-                            face.vertex_indices[index] = (u32)atoi(num_start) - 1;
-                        } break;
-                case 1: {
-                            face.texture_indices[index] = (u32)atoi(num_start) - 1;
-                        } break;
-                case 2: {
-                            face.normal_indices[index] = (u32)atoi(num_start) - 1;
-                            index++;
-                        } break;
-                default:{
-                        } break;
-            }
-            type++;
-            type %= 3;
-        }
-        input++;
-    }
-    return face;
-}
-
-static Model *model_from_obj(Arena *arena, char *file_path) {
-    FILE *obj_file = fopen(file_path, "r");
-    if (obj_file == 0) {
-        return 0;
-    }
-
-    Model *model = (Model *)arena_push(arena, sizeof(Model), align_of(Model));
-    model->mesh_vertex_count = 0;
-    model->texture_vertex_count = 0;
-    model->vertex_normals_count = 0;
-    model->face_count = 0;
-
-    char line_buf[1024];
-    while (fgets(line_buf, 1024, obj_file)) {
-        if (line_buf[0] == 'v' && line_buf[1] == ' ') {
-            model->mesh_vertex_count++;
-        } else if (line_buf[0] == 'v' && line_buf[1] == 't') {
-            model->texture_vertex_count++;
-        } else if (line_buf[0] == 'v' && line_buf[1] == 'n') {
-            model->vertex_normals_count++;
-        } else if(line_buf[0] == 'f') {
-            model->face_count++;
-        }
-    }
-    rewind(obj_file);
-
-    model->mesh_vertices = (Vec4 *)arena_push(arena, sizeof(Vec4) * model->mesh_vertex_count, align_of(Vec4));
-    model->texture_vertices = (Vec3 *)arena_push(arena, sizeof(Vec3) * model->texture_vertex_count, align_of(Vec3));
-    model->vertex_normals = (Vec3 *)arena_push(arena, sizeof(Vec3) * model->vertex_normals_count, align_of(Vec3));
-    model->faces = (Face *)arena_push(arena, sizeof(Face) * model->face_count, align_of(Face));
-
-    Vec4 *current_vertex = model->mesh_vertices;
-    Face *current_face = model->faces;
-    while (fgets(line_buf, 1024, obj_file)) {
-        if (line_buf[0] == 'v' && line_buf[1] == ' ') {
-            *current_vertex = parse_vertex(line_buf);
-            current_vertex++;
-        } else if (line_buf[0] == 'v' && line_buf[1] == 't') {
-            // TODO
-        } else if (line_buf[0] == 'v' && line_buf[1] == 'n') {
-            // TODO
-        } else if(line_buf[0] == 'f') {
-            *current_face = parse_face(line_buf);
-            current_face++;
-        }
-    }
-
-    fclose(obj_file);
-    return model;
 }

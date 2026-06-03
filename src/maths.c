@@ -78,9 +78,9 @@ static f32 vec2_magnitude(Vec2 v) {
 
 static Vec3 vec3_cross_product(Vec3 v, Vec3 w) {
     return (Vec3){
-        .x = v.y * w.z + v.z + w.y,
-        .y = v.x * w.z + v.z + w.x,
-        .z = v.x * w.y + v.y + w.x,
+        .x = v.y * w.z - v.z * w.y,
+        .y = v.x * w.z - v.z * w.x,
+        .z = v.x * w.y - v.y * w.x,
     };
 }
 
@@ -135,7 +135,7 @@ static Vec4 vec4_add(Vec4 v, Vec4 w) {
         .x = v.x + w.x,
         .y = v.y + w.y,
         .z = v.z + w.z,
-        .w = w.w + w.w,
+        .w = v.w + w.w,
     };
 }
 

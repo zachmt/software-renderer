@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 typedef int8_t i8;
 typedef int16_t i16;
@@ -56,7 +57,39 @@ typedef struct {
     u64 bytes_committed;
 } Arena;
 
-static Arena *arena_init(void);
 static void *arena_push(Arena *arena, u64 size, u64 alignment);
 static void arena_clear(Arena *arena);
 static void arena_destroy(Arena *arena);
+
+#define arena_push_struct(arena, typename) arena_push((arena), sizeof(typename), align_of(typename))
+#define arena_push_array(arena, typename, count) arena_push((arena), sizeof(typename) * (count), align_of(typename))
+
+typedef struct {
+    u8 *data;
+    u64 len;
+} Str8;
+
+typedef struct Str8Node Str8Node;
+struct Str8Node {
+    Str8Node *prev;
+    Str8Node *next;
+    Str8 str;
+};
+
+#define ws_delims s(" \n\r\t\v\f")
+#define ws_except_nl_delims s(" \t\v\f")
+
+static Str8 s(char *cstr);
+static Str8 str8_cat(Arena *arena, Str8 a, Str8 b);
+static Str8 str8_copy(Arena *arena, Str8 s);
+static Str8 str8_trim(Str8 s);
+static Str8Node *str8_split(Arena *arena, Str8 s, Str8 delims);
+static bool32 is_whitespace(u8 c);
+static bool32 str8_contains(Str8 s, u8 c);
+static bool32 str8_ends_with(Str8 s, Str8 suffix);
+static bool32 str8_equal(Str8 a, Str8 b);
+static bool32 str8_starts_with(Str8 s, Str8 prefix);
+static char *cstr(Arena *arena, Str8 s);
+static f32 str8_parse_f32(Str8 s);
+static i32 str8_parse_i32(Str8 s);
+static void println(Str8 s);

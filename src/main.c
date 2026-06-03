@@ -20,7 +20,7 @@ RenderState *init_state(Arena *arena, u32 window_width, u32 window_height) {
     state->obj->scale = 1.0f;
     state->obj->position = (Vec3){.x = 0.0f, .y = 0.0f, .z = 0.0f};
     state->obj->rotation = quat_identity;
-    state->obj->model = model_from_obj(state->arena, "res/model.obj");
+    state->obj->model = model_from_obj(state->arena, s("res/model.obj"));
     state->camera.position = (Vec4){.x = 0.0f, .y = 0.0f, .z = 0.0f, .w = 1.0f};
     state->camera.rotation = quat_identity;
     state->camera.fov_y_radians = (40.0f) * (f32_pi / 180.0f);
@@ -31,14 +31,16 @@ RenderState *init_state(Arena *arena, u32 window_width, u32 window_height) {
 }
 
 int main(void) {
+
+
     const i32 window_width = 800;
     const i32 window_height = 450;
     RGFW_window *window = RGFW_createWindow("Software Renderer", 0, 0, window_width, window_height, RGFW_windowCenter | RGFW_windowTransparent | RGFW_windowNoResize);
     RGFW_window_setExitKey(window, RGFW_keyEscape);
 
 
-    Arena *state_arena = arena_init();
-    RenderState *state = init_state(state_arena, window_width, window_height);
+    Arena state_arena = {0};
+    RenderState *state = init_state(&state_arena, window_width, window_height);
 
     RGFW_surface *surface = RGFW_createSurface((u8 *)state->frame_buffer, (i32)state->window_width, (i32)state->window_height, RGFW_formatRGBA8);
     RGFW_surface *depth_surface = RGFW_createSurface((u8 *)state->depth_buffer, (i32)state->window_width, (i32)state->window_height, RGFW_formatRGBA8);
@@ -83,9 +85,9 @@ int main(void) {
         }
 
         if (RGFW_isKeyDown(RGFW_keyJ)) {
-            state->controls.look_yaw = -1.0f;
-        } else if (RGFW_isKeyDown(RGFW_keyL)) {
             state->controls.look_yaw = 1.0f;
+        } else if (RGFW_isKeyDown(RGFW_keyL)) {
+            state->controls.look_yaw = -1.0f;
         } else {
             state->controls.look_yaw = 0.0f;
         }
@@ -100,7 +102,7 @@ int main(void) {
 
         if (RGFW_isKeyPressed(RGFW_keyB)) {
             arena_clear(state->arena);
-            state = init_state(state_arena, window_width, window_height);
+            state = init_state(&state_arena, window_width, window_height);
         }
 
         i32 w, h;
@@ -119,7 +121,7 @@ int main(void) {
         RGFW_window_blitSurface(window, surface);
     }
 
-    arena_destroy(state->arena);
+    arena_destroy(&state_arena);
 
     RGFW_surface_free(surface);
     RGFW_surface_free(depth_surface);

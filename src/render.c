@@ -132,8 +132,8 @@ static Mat4 get_world_to_view_mat4(Camera *cam) {
 
     Mat4 basis_change = {0};
     basis_change.m00 = 1.0f;
-    basis_change.m12 = -1.0f;
-    basis_change.m21 = 1.0f;
+    basis_change.m12 = 1.0f;
+    basis_change.m21 = -1.0f;
     basis_change.m33 = 1.0f;
 
     return mat4_multiply(basis_change, mat4_multiply(rotate, translate));
@@ -263,8 +263,8 @@ static void update_camera(RenderState *state, f32 dt) {
     Mat4 view_to_world_rotate = quat_to_rotation_mat4(state->camera.rotation);
     Mat4 basis_change = {0};
     basis_change.m00 = 1.0f;
-    basis_change.m12 = 1.0f;
-    basis_change.m21 = -1.0f;
+    basis_change.m12 = -1.0f;
+    basis_change.m21 = 1.0f;
     basis_change.m33 = 1.0f;
     Mat4 view_to_world = mat4_multiply(view_to_world_rotate, basis_change);
     Vec4 world_delta = mat4_vec4_multiply(view_to_world, view_delta);

@@ -74,7 +74,7 @@ typedef union{
     f32 q[4];
 } Quat;
 
-#define f32_pi 3.1459265f
+#define f32_pi 3.14159265f
 
 static f32 f32_tan(f32 radians);
 
