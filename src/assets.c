@@ -7,17 +7,18 @@
 #include <stdlib.h>
 
 static Model *model_from_obj(Arena *arena, Str8 file_path) {
-    Arena scratch = {0};
+    Arena *scratch = get_scratch(arena);
     Model *res = arena_push_struct(arena, Model);
 
-    Str8 contents = os_read_entire_file(&scratch, file_path);
+    Str8 contents = os_read_entire_file(scratch, file_path);
     // println(contents);
-    Str8Node *tokens = str8_split(&scratch, contents, ws_delims);
+    Str8Node *tokens = str8_split(scratch, contents, ws_delims);
 
     // Pre-pass to get size of arrays needed and trim
     Str8Node *curr = tokens;
     while (curr) {
         curr->str = str8_trim(curr->str);
+        // println(curr->str);
         if (str8_equal(curr->str, s("f"))) {
             res->face_count++;
         } else if (str8_equal(curr->str, s("vt"))) {
@@ -47,7 +48,7 @@ static Model *model_from_obj(Arena *arena, Str8 file_path) {
             // TODO: handle other formats (e.g. 1//2, 3/1, 1 2 3, etc.)
             res->faces[face_index].flags = FACE_NORMALS | FACE_POSITIONS | FACE_TEXCOORDS;
             for (u32 vert = 0; vert < 3; vert++) {
-                Str8Node *nums = str8_split(&scratch, curr->str, s("/"));
+                Str8Node *nums = str8_split(scratch, curr->str, s("/"));
                 res->faces[face_index].vertex_indices[vert] = (u32)str8_parse_i32(nums->str)-1;
                 nums=nums->next;
                 res->faces[face_index].texture_indices[vert] = (u32)str8_parse_i32(nums->str)-1;
@@ -56,7 +57,7 @@ static Model *model_from_obj(Arena *arena, Str8 file_path) {
                 curr = curr->next;
             }
 
-            // Face f = res->faces[face_index];
+            Face f = res->faces[face_index];
             // printf("Face[%u]:\t", face_index);
             // printf("%u/%u/%u\t", f.vertex_indices[0], f.texture_indices[0], f.normal_indices[0]);
             // printf("%u/%u/%u\t", f.vertex_indices[1], f.texture_indices[1], f.normal_indices[1]);
@@ -91,7 +92,7 @@ static Model *model_from_obj(Arena *arena, Str8 file_path) {
             // curr = curr->next;
             res->mesh_vertices[mesh_vertex_index].w = 1.0f; // TODO: handle case of explicit w coordinate
 
-            // Vec4 v = res->mesh_vertices[mesh_vertex_index];
+            Vec4 v = res->mesh_vertices[mesh_vertex_index];
             // printf("Vertex[%u]:\t", mesh_vertex_index);
             // printf("%f\t%f\t%f\n", v.x, v.y, v.z);
 
@@ -102,6 +103,6 @@ static Model *model_from_obj(Arena *arena, Str8 file_path) {
         }
     }
 
-    arena_destroy(&scratch);
+    free_scratch(scratch);
     return res;
 }

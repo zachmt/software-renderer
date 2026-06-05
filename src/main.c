@@ -31,8 +31,6 @@ RenderState *init_state(Arena *arena, u32 window_width, u32 window_height) {
 }
 
 int main(void) {
-
-
     const i32 window_width = 800;
     const i32 window_height = 450;
     RGFW_window *window = RGFW_createWindow("Software Renderer", 0, 0, window_width, window_height, RGFW_windowCenter | RGFW_windowTransparent | RGFW_windowNoResize);

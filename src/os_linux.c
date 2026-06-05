@@ -39,8 +39,8 @@ void os_mem_free(void *base, u64 size) {
 
 Str8 os_read_entire_file(Arena *arena, Str8 file_path) {
     Str8 res = {0};
-    Arena scratch = {0};
-    i32 fd = open(cstr(&scratch, file_path), O_RDONLY);
+    Arena *scratch = get_scratch(arena);
+    i32 fd = open(cstr(scratch, file_path), O_RDONLY);
     runtime_assert(fd != -1);
 
     i64 file_size = lseek(fd, 0, SEEK_END);
@@ -55,7 +55,6 @@ Str8 os_read_entire_file(Arena *arena, Str8 file_path) {
     i64 bytes_read = read(fd, res.data, res.len);
     runtime_assert(bytes_read == (i64)res.len);
     close(fd);
-    arena_destroy(&scratch);
-
+    free_scratch(scratch);
     return res;
 }
