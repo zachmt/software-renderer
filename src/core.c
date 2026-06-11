@@ -1,6 +1,15 @@
 #include "core.h"
 #include "os.h"
 #include <stdlib.h>
+#include <string.h>
+
+static void mem_set(void *dest, u8 byte, u64 size) {
+    memset(dest, byte, size);
+}
+
+static void mem_copy(void *dest, void *src, u64 size) {
+    memcpy(dest, src, size);
+}
 
 static void rng_seed(u32 seed) {
     srand(seed);
@@ -17,11 +26,11 @@ static f32 rng_generate_01(void) {
 #define ARENA_MAX_RESERVATION (1024ULL * 1024ULL * 1024ULL * 4ULL)
 static i32 active_arenas = 0;
 
-static Arena *get_scratch(Arena *arena) {
+static Arena *get_scratch(Arena *conflict) {
     static Arena scratch_arena_global[2] = {0};
 
     // Use a scratch arena that won't conflict
-    Arena *scratch = (arena == &scratch_arena_global[0]) ? &scratch_arena_global[1] : &scratch_arena_global[0];
+    Arena *scratch = (conflict == &scratch_arena_global[0]) ? &scratch_arena_global[1] : &scratch_arena_global[0];
     // Initialize the arena if not yet initialized
     arena_push(scratch, 0, align_of(u8));
 
@@ -76,7 +85,7 @@ static void *arena_push(Arena *arena, u64 size, u64 alignment) {
 
     void *res = (u8 *)align_pow2((u64)arena->memory_region_start + arena->bytes_allocated, alignment);
     arena->bytes_allocated += size;
-    memset(res, 0, size);
+    mem_set(res, 0, size);
 
 
     // printf("Arena allocated %lu bytes.\tTotal allocated: %lu bytes.\tTotal committed: %lu bytes.\tTotal reserved: %lu bytes.\n", size, arena->bytes_allocated, arena->bytes_committed, arena->bytes_reserved);
@@ -132,7 +141,7 @@ static Str8 str8_copy(Arena *arena, Str8 s) {
     Str8 res = (Str8){0};
     if (s.len > 0) {
         res.data = arena_push_array(arena, u8, s.len);
-        memcpy(res.data, s.data, s.len);
+        mem_copy(res.data, s.data, s.len);
         res.len = s.len;
     }
     return res;

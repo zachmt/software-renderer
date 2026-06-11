@@ -13,6 +13,15 @@ static ColorRGBA blue = {.r = 0, .g = 0, .b = 255, .a = 255};
 static ColorRGBA white = {.r = 255, .g = 255, .b = 255, .a = 255};
 static ColorRGBA black = {.r = 0, .g = 0, .b = 0, .a = 255};
 
+static ColorRGBA color_f32_to_u8(ColorRGBA_f32 c) {
+    ColorRGBA res = {0};
+    res.r = (u8)(f32_round_to_i32(255.0f * c.r) % 256);
+    res.g = (u8)(f32_round_to_i32(255.0f * c.g) % 256);
+    res.b = (u8)(f32_round_to_i32(255.0f * c.b) % 256);
+    res.a = (u8)(f32_round_to_i32(255.0f * c.a) % 256);
+    return res;
+}
+
 static ColorRGBA random_color(void) {
     ColorRGBA res = {0};
     res.r = (u8)rng_generate_i32();
@@ -73,15 +82,15 @@ static f32 signed_triangle_area(Vec3 a, Vec3 b, Vec3 c) {
 }
 
 static void draw_triangle(RenderState *state, Vec3 a, Vec3 b, Vec3 c, ColorRGBA color) {
-    i32 minx, miny, maxx, maxy;
-    minx = f32_round_to_i32(min(min(a.x, b.x), c.x));
-    miny = f32_round_to_i32(min(min(a.y, b.y), c.y));
-    maxx = f32_round_to_i32(max(max(a.x, b.x), c.x));
-    maxy = f32_round_to_i32(max(max(a.y, b.y), c.y));
+    i32 min_x, min_y, max_x, max_y;
+    min_x = f32_round_to_i32(min(min(a.x, b.x), c.x));
+    min_y = f32_round_to_i32(min(min(a.y, b.y), c.y));
+    max_x = f32_round_to_i32(max(max(a.x, b.x), c.x));
+    max_y = f32_round_to_i32(max(max(a.y, b.y), c.y));
 
     f32 total_area = signed_triangle_area(a, b, c);
-    for (i32 y = max(0, miny); y <= min((i32)state->window_height-1, maxy); y++) {
-        for (i32 x = max(0, minx); x <= min((i32)state->window_width-1, maxx); x++) {
+    for (i32 y = max(0, min_y); y <= min((i32)state->window_height-1, max_y); y++) {
+        for (i32 x = max(0, min_x); x <= min((i32)state->window_width-1, max_x); x++) {
             Vec3 p = {
                 .x = (f32)x,
                 .y = (f32)y,
@@ -103,33 +112,33 @@ static void draw_triangle(RenderState *state, Vec3 a, Vec3 b, Vec3 c, ColorRGBA 
     }
 }
 
-static Mat4 get_model_to_world_mat4(Object *obj) {
+static Mat4 get_model_to_world_mat4(Object obj) {
     Mat4 scale = {0};
-    scale.m00 = obj->scale;
-    scale.m11 = obj->scale;
-    scale.m22 = obj->scale;
+    scale.m00 = obj.scale;
+    scale.m11 = obj.scale;
+    scale.m22 = obj.scale;
     scale.m33 = 1.0f;
 
-    Mat4 translate = {0};
-    translate.m00 = 1.0f; translate.m03 = obj->position.x;
-    translate.m11 = 1.0f; translate.m13 = obj->position.y;
-    translate.m22 = 1.0f; translate.m23 = obj->position.z;
-    translate.m33 = 1.0f;
+    Mat4 translate = mat4_identity;
+    translate.m03 = obj.position.x;
+    translate.m13 = obj.position.y;
+    translate.m23 = obj.position.z;
 
-    Mat4 rotate = quat_to_rotation_mat4(obj->rotation);
+    Mat4 rotate = quat_to_rotation_mat4(obj.rotation);
 
     return mat4_multiply(translate, mat4_multiply(rotate, scale));
 }
 
-static Mat4 get_world_to_view_mat4(Camera *cam) {
-    Mat4 translate = {0};
-    translate.m00 = 1.0f; translate.m03 = -cam->position.x;
-    translate.m11 = 1.0f; translate.m13 = -cam->position.y;
-    translate.m22 = 1.0f; translate.m23 = -cam->position.z;
-    translate.m33 = 1.0f;
+static Mat4 get_world_to_view_mat4(Camera cam) {
+    Mat4 translate = mat4_identity;
+    translate.m03 = -cam.position.x;
+    translate.m13 = -cam.position.y;
+    translate.m23 = -cam.position.z;
 
-    Mat4 rotate = quat_to_rotation_mat4(quat_conjugate(cam->rotation));
+    Mat4 rotate = quat_to_rotation_mat4(quat_conjugate(cam.rotation));
 
+    // world coordinates: +x=right, +y=forwards, +z=up
+    // view coordinates: +x=right, +y=up, +z=backwards
     Mat4 basis_change = {0};
     basis_change.m00 = 1.0f;
     basis_change.m12 = 1.0f;
@@ -139,14 +148,14 @@ static Mat4 get_world_to_view_mat4(Camera *cam) {
     return mat4_multiply(basis_change, mat4_multiply(rotate, translate));
 }
 
-static Mat4 get_view_to_clip_mat4(Camera *cam) {
-    f32 top = cam->near_clip * f32_tan(cam->fov_y_radians / 2.0f);
-    f32 right = top * cam->aspect_ratio;
+static Mat4 get_view_to_clip_mat4(Camera cam) {
+    f32 top = cam.near_clip * f32_tan(cam.fov_y_radians / 2.0f);
+    f32 right = top * cam.aspect_ratio;
     Mat4 projection = {0};
-    projection.m00 = cam->near_clip / right;
-    projection.m11 = cam->near_clip / top;
-    projection.m22 = (cam->far_clip + cam->near_clip) / (cam->far_clip - cam->near_clip);
-    projection.m23 = (2.0f * cam->far_clip * cam->near_clip) / (cam->far_clip - cam->near_clip);
+    projection.m00 = cam.near_clip / right;
+    projection.m11 = cam.near_clip / top;
+    projection.m22 = (cam.far_clip + cam.near_clip) / (cam.far_clip - cam.near_clip);
+    projection.m23 = (2.0f * cam.far_clip * cam.near_clip) / (cam.far_clip - cam.near_clip);
     projection.m32 = -1.0f;
     return projection;
 }
@@ -159,7 +168,126 @@ static Vec3 ndc_to_screen(RenderState *state, Vec4 ndc) {
     };
 }
 
-static void rasterize_triangle(RenderState *state, Vec4 A, Vec4 B, Vec4 C) { // TODO: add fragment shader function pointer?
+static ColorRGBA phong_shade(Vec4 fragment_view_pos, Vec4 light_view_pos, Vec3 fragment_normal) {
+    // Ambient + Diffuse + Specular
+    f32 ambient = 0.0f;
+    f32 diffuse = 0.0f;
+    f32 specular = 0.0f;
+    ColorRGBA_f32 res = {
+        .r = ambient + diffuse + specular,
+        .g = ambient + diffuse + specular,
+        .b = ambient + diffuse + specular,
+        .a = 1.0f,
+    };
+
+    return color_f32_to_u8(res);
+}
+
+static void render_object_new(RenderState *state, Object obj) {
+    Arena *scratch = get_scratch(0);
+    rng_seed(0);
+
+    Mat4 model_to_world = get_model_to_world_mat4(obj);
+    Mat4 world_to_view = get_world_to_view_mat4(state->camera);
+    Mat4 view_to_clip = get_view_to_clip_mat4(state->camera);
+
+    Mat4 model_to_view = mat4_multiply(world_to_view, model_to_world);
+    Mat4 model_to_clip = mat4_multiply(view_to_clip, model_to_view);
+
+    Vec4 light_pos_world = (Vec4){.x = 10.0f, .y = 10.0f, .z = 10.0f};
+    Vec4 light_pos_view = mat4_vec4_multiply(world_to_view, light_pos_world);
+
+    Model model = obj.model;
+    for (u32 faces_index = 0; faces_index < obj.model.face_count; faces_index++) {
+        Face face = model.faces[faces_index];
+        Vec4 model_tri[3];
+        Vec4 view_tri[3];
+        Vec4 clip_tri[3];
+        Vec4 ndc_tri[3];
+        Vec3 screen_tri[3];
+        Vec4 normals[3];
+
+        for (u32 i = 0; i < 3; i++) {
+            u32 vertex_index = face.vertex_indices[i];
+            model_tri[i] = model.mesh_vertices[vertex_index];
+            u32 normal_index = face.normal_indices[i];
+            normals[i] = model.vertex_normals[normal_index];
+        }
+
+        // Get view space coordinates
+        for (u32 i = 0; i < 3; i++) {
+            view_tri[i] = mat4_vec4_multiply(model_to_view, model_tri[i]);
+            normals[i] = mat4_vec4_multiply(model_to_view, normals[i]);
+        }
+
+        for (u32 i = 0; i < 3; i++) {
+            clip_tri[i] = mat4_vec4_multiply(model_to_clip, model_tri[i]);
+        }
+
+        bool32 clipped = false;
+        for (u32 i = 0; i < 3; i++) {
+            for (u32 j = 0; j < 3; j++) {
+                if (clip_tri[i].v[j] > clip_tri[i].w || clip_tri[i].v[j] < -clip_tri[i].w) {
+                    clipped = true;
+                    break;
+                }
+            }
+        }
+
+        ColorRGBA rand_color = random_color();
+        if (!clipped) {
+            for (u32 i = 0; i < 3; i++) {
+                ndc_tri[i] = vec4_scale_down(clip_tri[i], clip_tri[i].w);
+            }
+
+            for (u32 i = 0; i < 3; i++) {
+                screen_tri[i] = ndc_to_screen(state, ndc_tri[i]);
+            }
+
+
+            // Rasterize
+            i32 min_x, min_y, max_x, max_y;
+            Vec3 a = screen_tri[0];
+            Vec3 b = screen_tri[1];
+            Vec3 c = screen_tri[2];
+            min_x = f32_round_to_i32(min(min(a.x, b.x), c.x));
+            min_y = f32_round_to_i32(min(min(a.y, b.y), c.y));
+            max_x = f32_round_to_i32(max(max(a.x, b.x), c.x));
+            max_y = f32_round_to_i32(max(max(a.y, b.y), c.y));
+
+            f32 total_area = signed_triangle_area(a, b, c);
+            for (i32 y = max(0, min_y); y <= min((i32)state->window_height-1, max_y); y++) {
+                for (i32 x = max(0, min_x); x <= min((i32)state->window_width-1, max_x); x++) {
+                    Vec3 p = {
+                        .x = (f32)x,
+                        .y = (f32)y,
+                        .z = 0.0f,
+                    };
+                    f32 alpha = signed_triangle_area(p, b, c) / total_area;
+                    f32 beta  = signed_triangle_area(p, c, a) / total_area;
+                    f32 gamma = signed_triangle_area(p, a, b) / total_area;
+                    if (!(alpha < 0.0f || beta < 0.0f || gamma < 0.0f)) {
+                        p.z = alpha * a.z + beta * b.z + gamma * c.z;
+                        u32 depth_index = (u32)y * state->window_width + (u32)x;
+                        runtime_assert(depth_index < state->depth_buffer_len);
+                        if (p.z > state->depth_buffer[depth_index]) {
+                            state->depth_buffer[depth_index] = p.z;
+
+                            // Interpolate fragment view pos and fragment normal
+                            ColorRGBA color = phong_shade(vec4_zero, vec4_zero, vec3_zero);
+
+                            draw_pixel(state, x, y, rand_color);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    free_scratch(scratch);
+}
+
+static void rasterize_triangle(RenderState *state, Vec4 A, Vec4 B, Vec4 C) {
     ColorRGBA color = random_color();
 
     if (
@@ -175,9 +303,9 @@ static void rasterize_triangle(RenderState *state, Vec4 A, Vec4 B, Vec4 C) { // 
        ) {
 
         // Clip -> NDC
-        A = vec4_scale(A, 1.0f / A.w);
-        B = vec4_scale(B, 1.0f / B.w);
-        C = vec4_scale(C, 1.0f / C.w);
+        A = vec4_scale_down(A, A.w);
+        B = vec4_scale_down(B, B.w);
+        C = vec4_scale_down(C, C.w);
 
 
         // NDC -> screen
@@ -191,34 +319,36 @@ static void rasterize_triangle(RenderState *state, Vec4 A, Vec4 B, Vec4 C) { // 
 }
 
 // Model Space (Vec4) -> World Space (Vec4) -> View Space (Vec4) -> Clip Space (Vec4) -> NDC (Vec3) -> Screen Space (Vec3)
-static void draw_object(RenderState *state, Object *obj) {
+static void draw_object(RenderState *state, Object obj) {
     rng_seed(0);
     Mat4 model_to_world = get_model_to_world_mat4(obj);
 
-    Mat4 world_to_view = get_world_to_view_mat4(&state->camera);
-    Mat4 view_to_clip = get_view_to_clip_mat4(&state->camera);
+    Mat4 world_to_view = get_world_to_view_mat4(state->camera);
+    Mat4 view_to_clip = get_view_to_clip_mat4(state->camera);
 
     Mat4 world_to_clip = mat4_multiply(view_to_clip, world_to_view);
     Mat4 model_to_clip = mat4_multiply(world_to_clip, model_to_world);
 
-    for (u32 face_index = 0; face_index < obj->model->face_count; face_index++) {
-        Face *face = obj->model->faces + face_index;
-        Vec4 A = obj->model->mesh_vertices[face->vertex_indices[0]];
-        Vec4 B = obj->model->mesh_vertices[face->vertex_indices[1]];
-        Vec4 C = obj->model->mesh_vertices[face->vertex_indices[2]];
+    for (u32 face_index = 0; face_index < obj.model.face_count; face_index++) {
+        Face face = obj.model.faces[face_index];
+        Vec4 A = obj.model.mesh_vertices[face.vertex_indices[0]];
+        Vec4 B = obj.model.mesh_vertices[face.vertex_indices[1]];
+        Vec4 C = obj.model.mesh_vertices[face.vertex_indices[2]];
 
         A = mat4_vec4_multiply(model_to_clip, A);
         B = mat4_vec4_multiply(model_to_clip, B);
         C = mat4_vec4_multiply(model_to_clip, C);
 
-        rasterize_triangle(state, A, B,C);
+        rasterize_triangle(state, A, B, C);
     }
 }
 
-static void render_2d_text(RenderState *state, Vec2 offset, char *str) {
-    EasyFontVertex vb[1000 * sizeof(EasyFontVertex) * 4];
+static void render_2d_text(RenderState *state, Vec2 offset, Str8 str) {
+    Arena *scratch = get_scratch(0);
+    // easy font docs say each character will take ~270 bytes. We'll do 300 to be safe.
+    EasyFontVertex *vb = arena_push(scratch, 300*str.len, align_of(EasyFontVertex));
     stb_easy_font_spacing(-0.5f);
-    i32 num_quads = stb_easy_font_print(offset.x, offset.y, str, NULL, vb, sizeof(vb));
+    i32 num_quads = stb_easy_font_print(offset.x, offset.y, cstr(scratch, str), NULL, vb, 300*(int)str.len);
     const f32 scale = 2.0f;
     for (i32 i = 0; i < num_quads * 4; i+=4) {
         Vec3 a = {
@@ -244,6 +374,7 @@ static void render_2d_text(RenderState *state, Vec2 offset, char *str) {
         draw_triangle(state, a, b, c, white);
         draw_triangle(state, c, d, a, white);
     }
+    free_scratch(scratch);
 }
 
 static void update_camera(RenderState *state, f32 dt) {
@@ -300,14 +431,16 @@ static void update_and_render(RenderState *state, f32 dt) {
     clock_gettime(CLOCK_MONOTONIC,&start);
     clear_frame_buffer(state, black);
     reset_depth_buffer(state);
-    draw_object(state, state->obj);
+    // draw_object(state, *state->obj);
+    render_object_new(state, state->obj[0]);
     clock_gettime(CLOCK_MONOTONIC,&end);
 
-    i64 s = end.tv_sec - start.tv_sec;
-    i64 ns = end.tv_nsec - start.tv_nsec;
-    f64 ms = (f64)s * 1000.0 + 0.000001 * (f64)ns;
+    i64 secs = end.tv_sec - start.tv_sec;
+    i64 nanos = end.tv_nsec - start.tv_nsec;
+    f64 ms = (f64)secs * 1000.0 + 0.000001 * (f64)nanos;
+
 
     char debug_text[1000] = {0};
     snprintf(debug_text, 1000, "dt %f s\nCamera pos (%f, %f, %f)\nCamera rot (%f, %f, %f, %f)\n%f ms", (f64)dt, (f64)state->camera.position.x, (f64)state->camera.position.y, (f64)state->camera.position.z, (f64)state->camera.rotation.w, (f64)state->camera.rotation.x, (f64)state->camera.rotation.y, (f64)state->camera.rotation.z, ms);
-    render_2d_text(state, vec2_zero, debug_text);
+    render_2d_text(state, vec2_zero, s(debug_text));
 }

@@ -76,19 +76,28 @@ typedef union{
 
 #define f32_pi 3.14159265f
 
+static f32 f32_arccos(f32 ah);
+static f32 f32_arcsin(f32 oh);
+static f32 f32_arctan(f32 oa);
+static f32 f32_cos(f32 radians);
+static f32 f32_sin(f32 radians);
 static f32 f32_tan(f32 radians);
+
+static f32 f32_pow(f32 x, f32 exponent);
+static f32 f32_sqrt(f32 x);
 
 static f32 f32_inf(void);
 static f32 f32_neg_inf(void);
 
 static i32 f32_round_to_i32(f32 x);
 
-static i32 i32_abs(i32 x);
 static f32 f32_abs(f32 x);
+static i32 i32_abs(i32 x);
 
 static Vec2 vec2_from_vec3(Vec3 v);
 static Vec2 vec2_normalize(Vec2 v);
 static Vec2 vec2_scale(Vec2 v, f32 n);
+static Vec2 vec2_scale_down(Vec2 v, f32 n);
 static bool32 vec2_is_equal(Vec2 v, Vec2 w);
 static f32 vec2_direction(Vec2 v);
 static f32 vec2_distance(Vec2 v, Vec2 w);
@@ -104,6 +113,7 @@ static Vec3 vec3_from_vec2(Vec2 v, f32 z);
 static Vec3 vec3_from_vec4(Vec4 v);
 static Vec3 vec3_normalize(Vec3 v);
 static Vec3 vec3_scale(Vec3 v, f32 n);
+static Vec3 vec3_scale_down(Vec3 v, f32 n);
 static bool32 vec3_is_equal(Vec3 v, Vec3 w);
 static f32 vec3_angle_between(Vec3 v, Vec3 w);
 static f32 vec3_dot_product(Vec3 v, Vec3 w);
@@ -118,6 +128,7 @@ static Vec4 vec4_add(Vec4 v, Vec4 w);
 static Vec4 vec4_from_vec3(Vec3 v, f32 w);
 static Vec4 vec4_normalize(Vec4 v);
 static Vec4 vec4_scale(Vec4 v, f32 n);
+static Vec4 vec4_scale_down(Vec4 v, f32 n);
 static bool32 vec4_is_equal(Vec4 v, Vec4 w);
 static f32 vec4_dot_product(Vec4 v, Vec4 w);
 static f32 vec4_magnitude(Vec4 v);
@@ -126,6 +137,7 @@ static f32 vec4_magnitude(Vec4 v);
 #define vec4_ihat ((Vec4){.x=1.0f,.y=0.0f,.z=0.0f, .w=0.0f})
 #define vec4_jhat ((Vec4){.x=0.0f,.y=1.0f,.z=0.0f, .w=0.0f})
 #define vec4_khat ((Vec4){.x=0.0f,.y=0.0f,.z=1.0f, .w=0.0f})
+#define vec4_lhat ((Vec4){.x=0.0f,.y=0.0f,.z=0.0f, .w=1.0f})
 
 static Mat2 mat2_multiply(Mat2 m, Mat2 n);
 static Mat2 mat2_transpose(Mat2 m);
@@ -158,4 +170,3 @@ static f32 quat_magnitude(Quat q);
 
 #define quat_zero ((Quat){0})
 #define quat_identity ((Quat){.w=1.0f})
-

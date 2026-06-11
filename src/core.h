@@ -46,6 +46,9 @@ typedef int32_t ExitStatus;
 # define align_of(T) __alignof__(T)
 #endif
 
+static void mem_set(void *dest, u8 byte, u64 size);
+static void mem_copy(void *dest, void *src, u64 size);
+
 static void rng_seed(u32 seed);
 static i32 rng_generate_i32(void);
 static f32 rng_generate_01(void);
@@ -64,7 +67,8 @@ typedef struct {
     ScratchFrame *current_scratch_frame;
 } Arena;
 
-static Arena *get_scratch(Arena *arena);
+// #define use_scratch(arena)  for (Arena *scratch = get_scratch(arena), *_once = (Arena *)1; _once; _once = NULL, free_scratch(scratch))
+static Arena *get_scratch(Arena *conflict);
 static void free_scratch(Arena *scratch);
 
 static void *arena_push(Arena *arena, u64 size, u64 alignment);

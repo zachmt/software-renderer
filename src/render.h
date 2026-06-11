@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core.h"
-#include "assets.h"
+#include "maths.h"
 
 typedef union {
     struct {
@@ -21,7 +21,7 @@ typedef union {
         f32 a;
     };
     f32 vals[4];
-} ColorRGBAf;
+} ColorRGBA_f32;
 
 typedef struct {
     Vec4 position;
@@ -48,7 +48,7 @@ typedef struct {
 typedef struct {
     Vec4 *mesh_vertices;
     Vec3 *texture_vertices;
-    Vec3 *vertex_normals;
+    Vec4 *vertex_normals;
     Face *faces;
     u32 mesh_vertex_count;
     u32 texture_vertex_count;
@@ -57,7 +57,7 @@ typedef struct {
 } Model;
 
 typedef struct {
-    Model *model;
+    Model model;
     f32 scale;
     Vec3 position;
     Quat rotation;

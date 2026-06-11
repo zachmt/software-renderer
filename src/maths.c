@@ -2,29 +2,62 @@
 #include <math.h>
 #include <stdlib.h>
 
+static f32 f32_arccos(f32 ah) {
+    return acosf(ah);
+}
+
+static f32 f32_arcsin(f32 oh) {
+    return asinf(oh);
+}
+
+static f32 f32_arctan(f32 oa) {
+    return atanf(oa);
+}
+
+static f32 f32_cos(f32 radians) {
+    return cosf(radians);
+}
+
+static f32 f32_sin(f32 radians) {
+    return sinf(radians);
+}
+
 static f32 f32_tan(f32 radians) {
     return tanf(radians);
 }
 
+static f32 f32_pow(f32 x, f32 exponent) {
+    return powf(x, exponent);
+}
+
+static f32 f32_sqrt(f32 x) {
+    return sqrtf(x);
+}
+
 static f32 f32_inf(void) {
+    f32 res;
     u32 bits = 0x7f800000;
-    return *(f32 *)&bits;
+    mem_copy(&res, &bits, sizeof(f32));
+    return res;
 }
 
 static f32 f32_neg_inf(void) {
+    f32 res;
     u32 bits = 0xff800000;
-    return *(f32 *)&bits;
+    mem_copy(&res, &bits, sizeof(f32));
+    return res;
 }
 
 static i32 f32_round_to_i32(f32 x) {
     return (i32)lroundf(x);
 }
 
-static i32 i32_abs(i32 x) {
-    return abs(x);
-}
 static f32 f32_abs(f32 x) {
     return fabsf(x);
+}
+
+static i32 i32_abs(i32 x) {
+    return abs(x);
 }
 
 // --- Vec2 ---
@@ -47,13 +80,21 @@ static Vec2 vec2_scale(Vec2 v, f32 n) {
     };
 }
 
+static Vec2 vec2_scale_down(Vec2 v, f32 n) {
+    assert(n != 0.0f);
+    return (Vec2) {
+        .x = v.x / n,
+        .y = v.y / n,
+    };
+}
+
 static bool32 vec2_is_equal(Vec2 v, Vec2 w) {
     return v.x == w.x && v.y == w.y;
 }
 
 static f32 vec2_direction(Vec2 v) {
     runtime_assert(v.x != 0.0f);
-    f32 angle = atanf((v.y / v.x));
+    f32 angle = f32_arctan(v.y / v.x);
     if (v.x < 0.0f) {
         angle += (f32)M_PI;
     } else if(v.y < 0.0f) {
@@ -63,7 +104,7 @@ static f32 vec2_direction(Vec2 v) {
 }
 
 static f32 vec2_distance(Vec2 v, Vec2 w) {
-    return sqrtf((v.x - w.x) * (v.x - w.x) + (v.y - w.y) * (v.y - w.y));
+    return f32_sqrt((v.x - w.x) * (v.x - w.x) + (v.y - w.y) * (v.y - w.y));
 }
 
 static f32 vec2_dot_product(Vec2 v, Vec2 w) {
@@ -71,7 +112,7 @@ static f32 vec2_dot_product(Vec2 v, Vec2 w) {
 }
 
 static f32 vec2_magnitude(Vec2 v) {
-    return sqrtf(v.x * v.x + v.y * v.y);
+    return f32_sqrt(v.x * v.x + v.y * v.y);
 }
 
 // --- Vec3 ---
@@ -112,12 +153,21 @@ static Vec3 vec3_scale(Vec3 v, f32 n) {
     };
 }
 
+static Vec3 vec3_scale_down(Vec3 v, f32 n) {
+    assert(n != 0.0f);
+    return (Vec3){
+        .x = v.x / n,
+        .y = v.y / n,
+        .z = v.z / n,
+    };
+}
+
 static bool32 vec3_is_equal(Vec3 v, Vec3 w) {
     return v.x == w.x && v.y == w.y && v.z == w.z;
 }
 
 static f32 vec3_angle_between(Vec3 v, Vec3 w) {
-    return acosf(vec3_dot_product(v, w) / (vec3_magnitude(v) * vec3_magnitude(w)));
+    return f32_arccos(vec3_dot_product(v, w) / (vec3_magnitude(v) * vec3_magnitude(w)));
 }
 
 static f32 vec3_dot_product(Vec3 v, Vec3 w) {
@@ -125,7 +175,7 @@ static f32 vec3_dot_product(Vec3 v, Vec3 w) {
 }
 
 static f32 vec3_magnitude(Vec3 v) {
-    return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+    return f32_sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 }
 
 // --- Vec4 ---
@@ -161,6 +211,16 @@ static Vec4 vec4_scale(Vec4 v, f32 n) {
     };
 }
 
+static Vec4 vec4_scale_down(Vec4 v, f32 n) {
+    assert(n != 0.0f);
+    return (Vec4){
+        .x = v.x / n,
+        .y = v.y / n,
+        .z = v.z / n,
+        .w = v.w / n,
+    };
+}
+
 static bool32 vec4_is_equal(Vec4 v, Vec4 w) {
     return v.x == w.x && v.y == w.y && v.z == w.z && v.w == w.w;
 }
@@ -170,7 +230,7 @@ static f32 vec4_dot_product(Vec4 v, Vec4 w) {
 }
 
 static f32 vec4_magnitude(Vec4 v) {
-    return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
+    return f32_sqrt(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
 }
 
 // --- Mat2 ---
@@ -282,10 +342,10 @@ static Quat quat_from_axis_angle(f32 angle, Vec3 axis) {
     f32 beta_x = vec3_angle_between(axis, vec3_ihat);
     f32 beta_y = vec3_angle_between(axis, vec3_jhat);
     f32 beta_z = vec3_angle_between(axis, vec3_khat);
-    q.w = cosf(angle / 2.0f);
-    q.x = sinf(angle / 2.0f)*cosf(beta_x);
-    q.y = sinf(angle / 2.0f)*cosf(beta_y);
-    q.z = sinf(angle / 2.0f)*cosf(beta_z);
+    q.w = f32_cos(angle / 2.0f);
+    q.x = f32_sin(angle / 2.0f)*f32_cos(beta_x);
+    q.y = f32_sin(angle / 2.0f)*f32_cos(beta_y);
+    q.z = f32_sin(angle / 2.0f)*f32_cos(beta_z);
     return quat_normalize(q);
 }
 
@@ -309,5 +369,5 @@ static Quat quat_normalize(Quat q) {
 }
 
 static f32 quat_magnitude(Quat q) {
-        return sqrtf(q.a * q.a + q.b * q.b + q.c * q.c + q.d * q.d);
+        return f32_sqrt(q.a * q.a + q.b * q.b + q.c * q.c + q.d * q.d);
 }

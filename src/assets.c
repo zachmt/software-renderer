@@ -3,10 +3,7 @@
 #include "os.h"
 #include "render.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-
-static Model *model_from_obj(Arena *arena, Str8 file_path) {
+static Model model_from_obj(Arena *arena, Str8 file_path) {
     Arena *scratch = get_scratch(arena);
     Model *res = arena_push_struct(arena, Model);
 
@@ -33,7 +30,7 @@ static Model *model_from_obj(Arena *arena, Str8 file_path) {
 
     res->faces = arena_push_array(arena, Face, res->face_count);
     res->texture_vertices = arena_push_array(arena, Vec3, res->texture_vertex_count);
-    res->vertex_normals = arena_push_array(arena, Vec3, res->vertex_normals_count);
+    res->vertex_normals = arena_push_array(arena, Vec4, res->vertex_normals_count);
     res->mesh_vertices = arena_push_array(arena, Vec4, res->mesh_vertex_count);
 
     u32 mesh_vertex_index = 0;
@@ -80,6 +77,8 @@ static Model *model_from_obj(Arena *arena, Str8 file_path) {
             res->vertex_normals[vertex_normal_index].y = str8_parse_f32(curr->str);
             curr = curr->next;
             res->vertex_normals[vertex_normal_index].z = str8_parse_f32(curr->str);
+            res->vertex_normals[vertex_normal_index].w = 0.0f;
+            // TODO: perhaps we should make sure the vector is normalized
             vertex_normal_index++;
             curr = curr->next;
         } else if (str8_equal(curr->str, s("v"))) {
@@ -92,10 +91,6 @@ static Model *model_from_obj(Arena *arena, Str8 file_path) {
             // curr = curr->next;
             res->mesh_vertices[mesh_vertex_index].w = 1.0f; // TODO: handle case of explicit w coordinate
 
-            Vec4 v = res->mesh_vertices[mesh_vertex_index];
-            // printf("Vertex[%u]:\t", mesh_vertex_index);
-            // printf("%f\t%f\t%f\n", v.x, v.y, v.z);
-
             mesh_vertex_index++;
             curr = curr->next;
         } else {
@@ -104,5 +99,5 @@ static Model *model_from_obj(Arena *arena, Str8 file_path) {
     }
 
     free_scratch(scratch);
-    return res;
+    return *res;
 }
