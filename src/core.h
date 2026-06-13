@@ -20,12 +20,26 @@ typedef uint32_t bool32;
 
 typedef int32_t ExitStatus;
 
+#if defined(_WIN32) || defined(_WIN64)
+#define OS_WINDOWS 1
+#elif defined(__APPLE__)
+// Technically you need to include TargetConditionals.h to see if you are on
+// MacOS vs iOS etc.
+#define OS_MAC 1
+#elif defined(__linux__)
+#define OS_LINUX 1
+#else
+#define OS_UNKNOWN 1
+#endif
+
 #if defined(__clang__)
 #define COMPILER_CLANG 1
 #elif defined(_MSC_VER)
 #define COMPILER_MSVC 1
 #elif defined(__GNUC__) || defined(__GNUG__)
 #define COMPILER_GCC 1
+#else
+#define COMPILER_UNKNOWN 1
 #endif
 
 #define swap(type, x, y) do { type _temp_ = (x); (x) = (y); (y) = _temp_; } while(0)

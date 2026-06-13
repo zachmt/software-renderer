@@ -31,17 +31,23 @@ RenderState *init_state(Arena *arena, u32 window_width, u32 window_height) {
 }
 
 int main(void) {
-    const i32 window_width = 800;
-    const i32 window_height = 450;
+    i32 window_width = 800;
+    i32 window_height = 450;
     RGFW_window *window = RGFW_createWindow("Software Renderer", 0, 0, window_width, window_height, RGFW_windowCenter | RGFW_windowTransparent | RGFW_windowNoResize);
     RGFW_window_setExitKey(window, RGFW_keyEscape);
 
+    RGFW_monitor *monitor = RGFW_window_getMonitor(window);
+    runtime_assert(monitor != NULL);
+    window_width = window_width * monitor->pixelRatio;
+    window_height = window_height * monitor->pixelRatio;
 
     Arena state_arena = {0};
     RenderState *state = init_state(&state_arena, window_width, window_height);
 
     RGFW_surface *surface = RGFW_createSurface((u8 *)state->frame_buffer, (i32)state->window_width, (i32)state->window_height, RGFW_formatRGBA8);
+    runtime_assert(surface != NULL);
     RGFW_surface *depth_surface = RGFW_createSurface((u8 *)state->depth_buffer, (i32)state->window_width, (i32)state->window_height, RGFW_formatRGBA8);
+    runtime_assert(depth_surface != NULL);
 
     f32 dt = 0.0f;
     struct timespec start, end;
@@ -126,9 +132,16 @@ int main(void) {
     RGFW_window_close(window);
 }
 
-#include "gen/wayland/wayland_source_files.h"
+#if OS_MAC
+#include "os_mac.c"
+#endif
 
+
+#if OS_LINUX
+#include "gen/wayland/wayland_source_files.h"
 #include "os_linux.c"
+#endif
+
 #include "render.c"
 #include "assets.c"
 #include "core.c"
