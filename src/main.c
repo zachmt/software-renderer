@@ -1,3 +1,4 @@
+#define _DEFAULT_SOURCE // fixes madvise not being defined due to RGFW
 #define RGFW_IMPLEMENTATION
 #include "RGFW.h"
 
@@ -38,11 +39,13 @@ int main(void) {
 
     RGFW_monitor *monitor = RGFW_window_getMonitor(window);
     runtime_assert(monitor != NULL);
-    window_width = window_width * monitor->pixelRatio;
-    window_height = window_height * monitor->pixelRatio;
+    window_width = window_width * (i32)monitor->pixelRatio;
+    window_height = window_height * (i32)monitor->pixelRatio;
+    runtime_assert(window_width > 0);
+    runtime_assert(window_height > 0);
 
     Arena state_arena = {0};
-    RenderState *state = init_state(&state_arena, window_width, window_height);
+    RenderState *state = init_state(&state_arena, (u32)window_width, (u32)window_height);
 
     RGFW_surface *surface = RGFW_createSurface((u8 *)state->frame_buffer, (i32)state->window_width, (i32)state->window_height, RGFW_formatRGBA8);
     runtime_assert(surface != NULL);
@@ -106,7 +109,7 @@ int main(void) {
 
         if (RGFW_isKeyPressed(RGFW_keyB)) {
             arena_clear(state->arena);
-            state = init_state(&state_arena, window_width, window_height);
+            state = init_state(&state_arena, (u32)window_width, (u32)window_height);
         }
 
         i32 w, h;

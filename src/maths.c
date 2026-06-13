@@ -96,9 +96,9 @@ static f32 vec2_direction(Vec2 v) {
     runtime_assert(v.x != 0.0f);
     f32 angle = f32_arctan(v.y / v.x);
     if (v.x < 0.0f) {
-        angle += (f32)M_PI;
+        angle += f32_pi;
     } else if(v.y < 0.0f) {
-        angle += 2.0f * (f32)M_PI;
+        angle += 2.0f * f32_pi;
     }
     return angle;
 }
