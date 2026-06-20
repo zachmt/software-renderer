@@ -95,68 +95,72 @@ static f32 f32_abs(f32 x);
 static i32 i32_abs(i32 x);
 
 static Vec2 vec2_from_vec3(Vec3 v);
-static Vec2 vec2_normalize(Vec2 v);
+static Vec2 vec2_norm(Vec2 v);
 static Vec2 vec2_scale(Vec2 v, f32 n);
 static Vec2 vec2_scale_down(Vec2 v, f32 n);
 static bool32 vec2_is_equal(Vec2 v, Vec2 w);
 static f32 vec2_direction(Vec2 v);
 static f32 vec2_distance(Vec2 v, Vec2 w);
-static f32 vec2_dot_product(Vec2 v, Vec2 w);
-static f32 vec2_magnitude(Vec2 v);
+static f32 vec2_dot(Vec2 v, Vec2 w);
+static f32 vec2_len(Vec2 v);
 
 #define vec2_zero ((Vec2){.x=0.0f,.y=0.0f})
 #define vec2_ihat ((Vec2){.x=1.0f,.y=0.0f})
 #define vec2_jhat ((Vec2){.x=0.0f,.y=1.0f})
 
-static Vec3 vec3_cross_product(Vec3 v, Vec3 w);
+static Vec3 vec3_add(Vec3 v, Vec3 w);
+static Vec3 vec3_sub(Vec3 v, Vec3 w);
+static Vec3 vec3_cross(Vec3 v, Vec3 w);
 static Vec3 vec3_from_vec2(Vec2 v, f32 z);
 static Vec3 vec3_from_vec4(Vec4 v);
-static Vec3 vec3_normalize(Vec3 v);
+static Vec3 vec3_norm(Vec3 v);
 static Vec3 vec3_scale(Vec3 v, f32 n);
 static Vec3 vec3_scale_down(Vec3 v, f32 n);
 static bool32 vec3_is_equal(Vec3 v, Vec3 w);
 static f32 vec3_angle_between(Vec3 v, Vec3 w);
-static f32 vec3_dot_product(Vec3 v, Vec3 w);
-static f32 vec3_magnitude(Vec3 v);
+static f32 vec3_dot(Vec3 v, Vec3 w);
+static f32 vec3_len(Vec3 v);
 
 #define vec3_zero ((Vec3){.x=0.0f,.y=0.0f,.z=0.0f})
 #define vec3_ihat ((Vec3){.x=1.0f,.y=0.0f,.z=0.0f})
 #define vec3_jhat ((Vec3){.x=0.0f,.y=1.0f,.z=0.0f})
 #define vec3_khat ((Vec3){.x=0.0f,.y=0.0f,.z=1.0f})
+#define vec3_negative_khat ((Vec3){.x=0.0f,.y=0.0f,.z=-1.0f})
 
 static Vec4 vec4_add(Vec4 v, Vec4 w);
 static Vec4 vec4_from_vec3(Vec3 v, f32 w);
-static Vec4 vec4_normalize(Vec4 v);
+static Vec4 vec4_norm(Vec4 v);
 static Vec4 vec4_scale(Vec4 v, f32 n);
 static Vec4 vec4_scale_down(Vec4 v, f32 n);
 static bool32 vec4_is_equal(Vec4 v, Vec4 w);
-static f32 vec4_dot_product(Vec4 v, Vec4 w);
-static f32 vec4_magnitude(Vec4 v);
+static f32 vec4_dot(Vec4 v, Vec4 w);
+static f32 vec4_len(Vec4 v);
 
 #define vec4_zero ((Vec4){.x=0.0f,.y=0.0f,.z=0.0f, .w=0.0f})
 #define vec4_ihat ((Vec4){.x=1.0f,.y=0.0f,.z=0.0f, .w=0.0f})
 #define vec4_jhat ((Vec4){.x=0.0f,.y=1.0f,.z=0.0f, .w=0.0f})
 #define vec4_khat ((Vec4){.x=0.0f,.y=0.0f,.z=1.0f, .w=0.0f})
 #define vec4_lhat ((Vec4){.x=0.0f,.y=0.0f,.z=0.0f, .w=1.0f})
+#define vec4_negative_khat ((Vec4){.x=0.0f,.y=0.0f,.z=-1.0f, .w=0.0f})
 
-static Mat2 mat2_multiply(Mat2 m, Mat2 n);
+static Mat2 mat2_mult(Mat2 m, Mat2 n);
 static Mat2 mat2_transpose(Mat2 m);
-static Vec2 mat2_vec2_multiply(Mat2 m, Vec2 v);
+static Vec2 mat2_vec2_mult(Mat2 m, Vec2 v);
 static f32 mat2_determinant(Mat2 m);
 
 #define mat2_zero ((Mat2){0})
 #define mat2_identity ((Mat2){.m00=1.0f,.m11=1.0f})
 
-static Mat3 mat3_multiply(Mat3 m, Mat3 n);
+static Mat3 mat3_mult(Mat3 m, Mat3 n);
 static Mat3 mat3_transpose(Mat3 m);
-static Vec3 mat3_vec3_multiply(Mat3 m, Vec3 v);
+static Vec3 mat3_vec3_mult(Mat3 m, Vec3 v);
 
 #define mat3_zero ((Mat3){0})
 #define mat3_identity ((Mat3){.m00=1.0f,.m11=1.0f,.m22=1.0f})
 
-static Mat4 mat4_multiply(Mat4 m, Mat4 n);
+static Mat4 mat4_mult(Mat4 m, Mat4 n);
 static Mat4 mat4_transpose(Mat4 m);
-static Vec4 mat4_vec4_multiply(Mat4 m, Vec4 v);
+static Vec4 mat4_vec4_mult(Mat4 m, Vec4 v);
 
 #define mat4_zero ((Mat4){0})
 #define mat4_identity ((Mat4){.m00=1.0f,.m11=1.0f,.m22=1.0f,.m33=1.0f})
@@ -164,9 +168,9 @@ static Vec4 mat4_vec4_multiply(Mat4 m, Vec4 v);
 static Mat4 quat_to_rotation_mat4(Quat q);
 static Quat quat_conjugate(Quat q);
 static Quat quat_from_axis_angle(f32 angle, Vec3 axis);
-static Quat quat_multiply(Quat q, Quat r);
-static Quat quat_normalize(Quat q);
-static f32 quat_magnitude(Quat q);
+static Quat quat_mult(Quat q, Quat r);
+static Quat quat_norm(Quat q);
+static f32 quat_len(Quat q);
 
 #define quat_zero ((Quat){0})
 #define quat_identity ((Quat){.w=1.0f})

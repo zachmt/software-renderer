@@ -1,5 +1,6 @@
 #include "assets.h"
 #include "core.h"
+#include "maths.h"
 #include "os.h"
 #include "render.h"
 
@@ -8,14 +9,12 @@ static Model model_from_obj(Arena *arena, Str8 file_path) {
     Model *res = arena_push_struct(arena, Model);
 
     Str8 contents = os_read_entire_file(scratch, file_path);
-    // println(contents);
     Str8Node *tokens = str8_split(scratch, contents, ws_delims);
 
     // Pre-pass to get size of arrays needed and trim
     Str8Node *curr = tokens;
     while (curr) {
         curr->str = str8_trim(curr->str);
-        // println(curr->str);
         if (str8_equal(curr->str, s("f"))) {
             res->face_count++;
         } else if (str8_equal(curr->str, s("vt"))) {
@@ -55,10 +54,6 @@ static Model model_from_obj(Arena *arena, Str8 file_path) {
             }
 
             Face f = res->faces[face_index];
-            // printf("Face[%u]:\t", face_index);
-            // printf("%u/%u/%u\t", f.vertex_indices[0], f.texture_indices[0], f.normal_indices[0]);
-            // printf("%u/%u/%u\t", f.vertex_indices[1], f.texture_indices[1], f.normal_indices[1]);
-            // printf("%u/%u/%u\n", f.vertex_indices[2], f.texture_indices[2], f.normal_indices[2]);
 
             face_index++;
         } else if (str8_equal(curr->str, s("vt"))) {
@@ -78,7 +73,7 @@ static Model model_from_obj(Arena *arena, Str8 file_path) {
             curr = curr->next;
             res->vertex_normals[vertex_normal_index].z = str8_parse_f32(curr->str);
             res->vertex_normals[vertex_normal_index].w = 0.0f;
-            // TODO: perhaps we should make sure the vector is normalized
+            res->vertex_normals[vertex_normal_index] = vec4_norm(res->vertex_normals[vertex_normal_index]);
             vertex_normal_index++;
             curr = curr->next;
         } else if (str8_equal(curr->str, s("v"))) {

@@ -112,7 +112,7 @@ static void draw_triangle(RenderState *state, Vec3 a, Vec3 b, Vec3 c, ColorRGBA 
     }
 }
 
-static Mat4 get_model_to_world_mat4(Object obj) {
+static Mat4 model_to_world_mat4(Object obj) {
     Mat4 scale = {0};
     scale.m00 = obj.scale;
     scale.m11 = obj.scale;
@@ -126,10 +126,10 @@ static Mat4 get_model_to_world_mat4(Object obj) {
 
     Mat4 rotate = quat_to_rotation_mat4(obj.rotation);
 
-    return mat4_multiply(translate, mat4_multiply(rotate, scale));
+    return mat4_mult(translate, mat4_mult(rotate, scale));
 }
 
-static Mat4 get_world_to_view_mat4(Camera cam) {
+static Mat4 world_to_view_mat4(Camera cam) {
     Mat4 translate = mat4_identity;
     translate.m03 = -cam.position.x;
     translate.m13 = -cam.position.y;
@@ -145,10 +145,10 @@ static Mat4 get_world_to_view_mat4(Camera cam) {
     basis_change.m21 = -1.0f;
     basis_change.m33 = 1.0f;
 
-    return mat4_multiply(basis_change, mat4_multiply(rotate, translate));
+    return mat4_mult(basis_change, mat4_mult(rotate, translate));
 }
 
-static Mat4 get_view_to_clip_mat4(Camera cam) {
+static Mat4 view_to_clip_mat4(Camera cam) {
     f32 top = cam.near_clip * f32_tan(cam.fov_y_radians / 2.0f);
     f32 right = top * cam.aspect_ratio;
     Mat4 projection = {0};
@@ -168,17 +168,30 @@ static Vec3 ndc_to_screen(RenderState *state, Vec4 ndc) {
     };
 }
 
-static ColorRGBA phong_shade(Vec4 fragment_view_pos, Vec4 light_view_pos, Vec3 fragment_normal) {
-    // Ambient + Diffuse + Specular
-    f32 ambient = 0.0f;
-    f32 diffuse = 0.0f;
-    f32 specular = 0.0f;
+typedef struct {
+    Vec3 fragment_view_pos;
+    Vec3 fragment_view_norm;
+    Vec3 light_view_pos;
+    u32 face_number;
+} FragmentShaderData;
+
+static ColorRGBA phong_shade(FragmentShaderData data) {
+    Vec3 fragment_to_light = vec3_norm(vec3_sub(data.light_view_pos, data.fragment_view_pos));
+    Vec3 fragment_to_camera = vec3_scale(vec3_norm(data.fragment_view_pos), -1);
+
+    Vec3 reflection = vec3_sub(vec3_scale(data.fragment_view_norm, 2.0f * vec3_dot(data.fragment_view_norm, fragment_to_light)), fragment_to_light);
+
+    f32 ambient = 0.05f;
+    f32 diffuse = max(0.0f, vec3_dot(data.fragment_view_norm, fragment_to_light));
+    f32 specular = f32_pow(max(0.0f, vec3_dot(reflection, fragment_to_camera)), 4);
+
     ColorRGBA_f32 res = {
-        .r = ambient + diffuse + specular,
-        .g = ambient + diffuse + specular,
-        .b = ambient + diffuse + specular,
+        .r = min(1.0f, ambient + diffuse + specular),
+        .g = min(1.0f, ambient + diffuse + specular),
+        .b = min(1.0f, ambient + diffuse + specular),
         .a = 1.0f,
     };
+
 
     return color_f32_to_u8(res);
 }
@@ -187,103 +200,124 @@ static void render_object_new(RenderState *state, Object obj) {
     Arena *scratch = get_scratch(0);
     rng_seed(0);
 
-    Mat4 model_to_world = get_model_to_world_mat4(obj);
-    Mat4 world_to_view = get_world_to_view_mat4(state->camera);
-    Mat4 view_to_clip = get_view_to_clip_mat4(state->camera);
+    Mat4 model_to_world = model_to_world_mat4(obj);
+    Mat4 world_to_view = world_to_view_mat4(state->camera);
+    Mat4 view_to_clip = view_to_clip_mat4(state->camera);
 
-    Mat4 model_to_view = mat4_multiply(world_to_view, model_to_world);
-    Mat4 model_to_clip = mat4_multiply(view_to_clip, model_to_view);
+    Mat4 model_to_view = mat4_mult(world_to_view, model_to_world);
+    Mat4 model_to_clip = mat4_mult(view_to_clip, model_to_view);
 
-    Vec4 light_pos_world = (Vec4){.x = 10.0f, .y = 10.0f, .z = 10.0f};
-    Vec4 light_pos_view = mat4_vec4_multiply(world_to_view, light_pos_world);
+    Vec4 light_pos_world = (Vec4){.x = 10.0f, .y = 10.0f, .z = 10.0f, .w = 1.0f};
+    Vec4 light_pos_view = mat4_vec4_mult(world_to_view, light_pos_world);
 
-    Model model = obj.model;
+
+    u32 normal_count = obj.model.vertex_normals_count;
+    Vec4 *mesh_normals = obj.model.vertex_normals;
+    Vec4 *view_normals = arena_push_array(scratch, Vec4, normal_count);
+    for (u32 i = 0; i < normal_count; i++) {
+        view_normals[i] = mat4_vec4_mult(model_to_view, mesh_normals[i]);
+    }
+
+    u32 vertex_count = obj.model.mesh_vertex_count;
+    Vec4 *mesh_vertices = obj.model.mesh_vertices;
+
+    Vec4 *view_vertices = arena_push_array(scratch, Vec4, vertex_count);
+    for (u32 i = 0; i < vertex_count; i++) {
+        view_vertices[i] = mat4_vec4_mult(model_to_view, mesh_vertices[i]);
+    }
+
+    Vec4 *clip_vertices = arena_push_array(scratch, Vec4, vertex_count);
+    for (u32 i = 0; i < vertex_count; i++) {
+        clip_vertices[i] = mat4_vec4_mult(model_to_clip, mesh_vertices[i]);
+    }
+
+    Vec4 *ndc_vertices = arena_push_array(scratch, Vec4, vertex_count);
+    for (u32 i = 0; i < vertex_count; i++) {
+        if (clip_vertices[i].w != 0.0f) {
+            ndc_vertices[i] = vec4_scale_down(clip_vertices[i], clip_vertices[i].w);
+        }
+    }
+
+    bool32 *clipped = arena_push_array(scratch, bool32, vertex_count);
+    for (u32 i = 0; i < vertex_count; i++) {
+        f32 x = clip_vertices[i].x;
+        f32 y = clip_vertices[i].y;
+        f32 z = clip_vertices[i].z;
+        f32 w = clip_vertices[i].w;
+        clipped[i] = false;
+        clipped[i] = !(x > -w && x < w && y > -w && y < w && z > -w && z < w);
+    }
+
+
     for (u32 faces_index = 0; faces_index < obj.model.face_count; faces_index++) {
-        Face face = model.faces[faces_index];
-        Vec4 model_tri[3];
-        Vec4 view_tri[3];
-        Vec4 clip_tri[3];
-        Vec4 ndc_tri[3];
+        Face face = obj.model.faces[faces_index];
         Vec3 screen_tri[3];
-        Vec4 normals[3];
 
-        for (u32 i = 0; i < 3; i++) {
-            u32 vertex_index = face.vertex_indices[i];
-            model_tri[i] = model.mesh_vertices[vertex_index];
-            u32 normal_index = face.normal_indices[i];
-            normals[i] = model.vertex_normals[normal_index];
+        if (clipped[face.vertex_indices[0]] || clipped[face.vertex_indices[1]] || clipped[face.vertex_indices[2]]) {
+            continue;
         }
 
-        // Get view space coordinates
-        for (u32 i = 0; i < 3; i++) {
-            view_tri[i] = mat4_vec4_multiply(model_to_view, model_tri[i]);
-            normals[i] = mat4_vec4_multiply(model_to_view, normals[i]);
-        }
+        screen_tri[0] = ndc_to_screen(state, ndc_vertices[face.vertex_indices[0]]);
+        screen_tri[1] = ndc_to_screen(state, ndc_vertices[face.vertex_indices[1]]);
+        screen_tri[2] = ndc_to_screen(state, ndc_vertices[face.vertex_indices[2]]);
 
-        for (u32 i = 0; i < 3; i++) {
-            clip_tri[i] = mat4_vec4_multiply(model_to_clip, model_tri[i]);
-        }
+        // Rasterize
+        i32 min_x, min_y, max_x, max_y;
+        Vec3 a = screen_tri[0];
+        Vec3 b = screen_tri[1];
+        Vec3 c = screen_tri[2];
+        min_x = f32_round_to_i32(min(min(a.x, b.x), c.x));
+        min_y = f32_round_to_i32(min(min(a.y, b.y), c.y));
+        max_x = f32_round_to_i32(max(max(a.x, b.x), c.x));
+        max_y = f32_round_to_i32(max(max(a.y, b.y), c.y));
 
-        bool32 clipped = false;
-        for (u32 i = 0; i < 3; i++) {
-            for (u32 j = 0; j < 3; j++) {
-                if (clip_tri[i].v[j] > clip_tri[i].w || clip_tri[i].v[j] < -clip_tri[i].w) {
-                    clipped = true;
-                    break;
-                }
-            }
-        }
+        f32 total_area = signed_triangle_area(a, b, c);
+        for (i32 y = max(0, min_y); y <= min((i32)state->window_height-1, max_y); y++) {
+            for (i32 x = max(0, min_x); x <= min((i32)state->window_width-1, max_x); x++) {
+                Vec3 p = {
+                    .x = (f32)x,
+                    .y = (f32)y,
+                    .z = 0.0f,
+                };
+                f32 alpha = signed_triangle_area(p, b, c) / total_area;
+                f32 beta  = signed_triangle_area(p, c, a) / total_area;
+                f32 gamma = signed_triangle_area(p, a, b) / total_area;
+                if (!(alpha < 0.0f || beta < 0.0f || gamma < 0.0f)) {
+                    p.z = alpha * a.z + beta * b.z + gamma * c.z;
+                    u32 depth_index = (u32)y * state->window_width + (u32)x;
+                    runtime_assert(depth_index < state->depth_buffer_len);
+                    if (p.z > state->depth_buffer[depth_index]) {
+                        state->depth_buffer[depth_index] = p.z;
 
-        ColorRGBA rand_color = random_color();
-        if (!clipped) {
-            for (u32 i = 0; i < 3; i++) {
-                ndc_tri[i] = vec4_scale_down(clip_tri[i], clip_tri[i].w);
-            }
+                        // Interpolate fragment view pos and fragment normal
+                        // TODO: interpolate using view space barycentric coordinates
+                        Vec4 fragment_view_pos = vec4_lhat;
+                        fragment_view_pos.x = alpha * view_vertices[face.vertex_indices[0]].x + beta * view_vertices[face.vertex_indices[1]].x + gamma * view_vertices[face.vertex_indices[2]].x;
+                        fragment_view_pos.y = alpha * view_vertices[face.vertex_indices[0]].y + beta * view_vertices[face.vertex_indices[1]].y + gamma * view_vertices[face.vertex_indices[2]].y;
+                        fragment_view_pos.z = alpha * view_vertices[face.vertex_indices[0]].z + beta * view_vertices[face.vertex_indices[1]].z + gamma * view_vertices[face.vertex_indices[2]].z;
 
-            for (u32 i = 0; i < 3; i++) {
-                screen_tri[i] = ndc_to_screen(state, ndc_tri[i]);
-            }
+                        Vec3 fragment_normal = vec3_zero;
+                        fragment_normal.x = alpha * view_normals[face.normal_indices[0]].x + beta * view_normals[face.normal_indices[1]].x + gamma * view_normals[face.normal_indices[2]].x;
+                        fragment_normal.y = alpha * view_normals[face.normal_indices[0]].y + beta * view_normals[face.normal_indices[1]].y + gamma * view_normals[face.normal_indices[2]].y;
+                        fragment_normal.z = alpha * view_normals[face.normal_indices[0]].z + beta * view_normals[face.normal_indices[1]].z + gamma * view_normals[face.normal_indices[2]].z;
+                        fragment_normal = vec3_norm(fragment_normal);
 
 
-            // Rasterize
-            i32 min_x, min_y, max_x, max_y;
-            Vec3 a = screen_tri[0];
-            Vec3 b = screen_tri[1];
-            Vec3 c = screen_tri[2];
-            min_x = f32_round_to_i32(min(min(a.x, b.x), c.x));
-            min_y = f32_round_to_i32(min(min(a.y, b.y), c.y));
-            max_x = f32_round_to_i32(max(max(a.x, b.x), c.x));
-            max_y = f32_round_to_i32(max(max(a.y, b.y), c.y));
+                        FragmentShaderData data = {
+                            .fragment_view_norm = fragment_normal,
+                            .fragment_view_pos = vec3_from_vec4(fragment_view_pos),
+                            .face_number = faces_index,
+                            .light_view_pos = vec3_from_vec4(light_pos_view),
+                        };
+                        //vec3_from_vec4(fragment_view_pos), vec3_from_vec4(light_pos_view), fragment_normal
+                        ColorRGBA color = phong_shade(data);
 
-            f32 total_area = signed_triangle_area(a, b, c);
-            for (i32 y = max(0, min_y); y <= min((i32)state->window_height-1, max_y); y++) {
-                for (i32 x = max(0, min_x); x <= min((i32)state->window_width-1, max_x); x++) {
-                    Vec3 p = {
-                        .x = (f32)x,
-                        .y = (f32)y,
-                        .z = 0.0f,
-                    };
-                    f32 alpha = signed_triangle_area(p, b, c) / total_area;
-                    f32 beta  = signed_triangle_area(p, c, a) / total_area;
-                    f32 gamma = signed_triangle_area(p, a, b) / total_area;
-                    if (!(alpha < 0.0f || beta < 0.0f || gamma < 0.0f)) {
-                        p.z = alpha * a.z + beta * b.z + gamma * c.z;
-                        u32 depth_index = (u32)y * state->window_width + (u32)x;
-                        runtime_assert(depth_index < state->depth_buffer_len);
-                        if (p.z > state->depth_buffer[depth_index]) {
-                            state->depth_buffer[depth_index] = p.z;
-
-                            // Interpolate fragment view pos and fragment normal
-                            ColorRGBA color = phong_shade(vec4_zero, vec4_zero, vec3_zero);
-
-                            draw_pixel(state, x, y, rand_color);
-                        }
+                        draw_pixel(state, x, y, color);
                     }
                 }
             }
         }
     }
-
     free_scratch(scratch);
 }
 
@@ -315,31 +349,6 @@ static void rasterize_triangle(RenderState *state, Vec4 A, Vec4 B, Vec4 C) {
 
 
         draw_triangle(state, a, b, c, color);
-    }
-}
-
-// Model Space (Vec4) -> World Space (Vec4) -> View Space (Vec4) -> Clip Space (Vec4) -> NDC (Vec3) -> Screen Space (Vec3)
-static void draw_object(RenderState *state, Object obj) {
-    rng_seed(0);
-    Mat4 model_to_world = get_model_to_world_mat4(obj);
-
-    Mat4 world_to_view = get_world_to_view_mat4(state->camera);
-    Mat4 view_to_clip = get_view_to_clip_mat4(state->camera);
-
-    Mat4 world_to_clip = mat4_multiply(view_to_clip, world_to_view);
-    Mat4 model_to_clip = mat4_multiply(world_to_clip, model_to_world);
-
-    for (u32 face_index = 0; face_index < obj.model.face_count; face_index++) {
-        Face face = obj.model.faces[face_index];
-        Vec4 A = obj.model.mesh_vertices[face.vertex_indices[0]];
-        Vec4 B = obj.model.mesh_vertices[face.vertex_indices[1]];
-        Vec4 C = obj.model.mesh_vertices[face.vertex_indices[2]];
-
-        A = mat4_vec4_multiply(model_to_clip, A);
-        B = mat4_vec4_multiply(model_to_clip, B);
-        C = mat4_vec4_multiply(model_to_clip, C);
-
-        rasterize_triangle(state, A, B, C);
     }
 }
 
@@ -388,7 +397,7 @@ static void update_camera(RenderState *state, f32 dt) {
     };
 
     if (!vec4_is_equal(view_delta, vec4_zero)) {
-        view_delta = vec4_scale(vec4_normalize(view_delta), movement_speed * dt);
+        view_delta = vec4_scale(vec4_norm(view_delta), movement_speed * dt);
     }
 
     Mat4 view_to_world_rotate = quat_to_rotation_mat4(state->camera.rotation);
@@ -397,8 +406,8 @@ static void update_camera(RenderState *state, f32 dt) {
     basis_change.m12 = -1.0f;
     basis_change.m21 = 1.0f;
     basis_change.m33 = 1.0f;
-    Mat4 view_to_world = mat4_multiply(view_to_world_rotate, basis_change);
-    Vec4 world_delta = mat4_vec4_multiply(view_to_world, view_delta);
+    Mat4 view_to_world = mat4_mult(view_to_world_rotate, basis_change);
+    Vec4 world_delta = mat4_vec4_mult(view_to_world, view_delta);
     state->camera.position = vec4_add(state->camera.position, world_delta);
 
 
@@ -418,9 +427,9 @@ static void update_camera(RenderState *state, f32 dt) {
     Quat pitch_delta = quat_from_axis_angle(pitch_angle, vec3_ihat);
     Quat yaw_delta = quat_from_axis_angle(yaw_angle, vec3_khat);
 
-    Quat delta = quat_multiply(yaw_delta, quat_multiply(pitch_delta, roll_delta));
+    Quat delta = quat_mult(yaw_delta, quat_mult(pitch_delta, roll_delta));
 
-    state->camera.rotation = quat_normalize(quat_multiply(state->camera.rotation, delta));
+    state->camera.rotation = quat_norm(quat_mult(state->camera.rotation, delta));
 }
 
 static void update_and_render(RenderState *state, f32 dt) {

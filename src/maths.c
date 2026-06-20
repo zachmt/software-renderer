@@ -69,8 +69,8 @@ static Vec2 vec2_from_vec3(Vec3 v) {
     };
 }
 
-static Vec2 vec2_normalize(Vec2 v) {
-    return vec2_scale(v, 1.0f / vec2_magnitude(v));
+static Vec2 vec2_norm(Vec2 v) {
+    return vec2_scale(v, 1.0f / vec2_len(v));
 }
 
 static Vec2 vec2_scale(Vec2 v, f32 n) {
@@ -107,17 +107,31 @@ static f32 vec2_distance(Vec2 v, Vec2 w) {
     return f32_sqrt((v.x - w.x) * (v.x - w.x) + (v.y - w.y) * (v.y - w.y));
 }
 
-static f32 vec2_dot_product(Vec2 v, Vec2 w) {
+static f32 vec2_dot(Vec2 v, Vec2 w) {
     return v.x * w.x + v.y * w.y;
 }
 
-static f32 vec2_magnitude(Vec2 v) {
+static f32 vec2_len(Vec2 v) {
     return f32_sqrt(v.x * v.x + v.y * v.y);
 }
 
 // --- Vec3 ---
+static Vec3 vec3_add(Vec3 v, Vec3 w) {
+    return (Vec3){
+        .x = v.x + w.x,
+        .y = v.y + w.y,
+        .z = v.z + w.z,
+    };
+}
+static Vec3 vec3_sub(Vec3 v, Vec3 w) {
+    return (Vec3){
+        .x = v.x - w.x,
+        .y = v.y - w.y,
+        .z = v.z - w.z,
+    };
+}
 
-static Vec3 vec3_cross_product(Vec3 v, Vec3 w) {
+static Vec3 vec3_cross(Vec3 v, Vec3 w) {
     return (Vec3){
         .x = v.y * w.z - v.z * w.y,
         .y = v.x * w.z - v.z * w.x,
@@ -141,8 +155,8 @@ static Vec3 vec3_from_vec4(Vec4 v) {
     };
 }
 
-static Vec3 vec3_normalize(Vec3 v) {
-    return vec3_scale(v, 1.0f / vec3_magnitude(v));
+static Vec3 vec3_norm(Vec3 v) {
+    return vec3_scale(v, 1.0f / vec3_len(v));
 }
 
 static Vec3 vec3_scale(Vec3 v, f32 n) {
@@ -167,14 +181,14 @@ static bool32 vec3_is_equal(Vec3 v, Vec3 w) {
 }
 
 static f32 vec3_angle_between(Vec3 v, Vec3 w) {
-    return f32_arccos(vec3_dot_product(v, w) / (vec3_magnitude(v) * vec3_magnitude(w)));
+    return f32_arccos(vec3_dot(v, w) / (vec3_len(v) * vec3_len(w)));
 }
 
-static f32 vec3_dot_product(Vec3 v, Vec3 w) {
+static f32 vec3_dot(Vec3 v, Vec3 w) {
     return v.x * w.x + v.y * w.y + v.z * w.z;
 }
 
-static f32 vec3_magnitude(Vec3 v) {
+static f32 vec3_len(Vec3 v) {
     return f32_sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 }
 
@@ -198,8 +212,8 @@ static Vec4 vec4_from_vec3(Vec3 v, f32 w) {
     };
 }
 
-static Vec4 vec4_normalize(Vec4 v) {
-    return vec4_scale(v, 1.0f / vec4_magnitude(v));
+static Vec4 vec4_norm(Vec4 v) {
+    return vec4_scale(v, 1.0f / vec4_len(v));
 }
 
 static Vec4 vec4_scale(Vec4 v, f32 n) {
@@ -225,17 +239,17 @@ static bool32 vec4_is_equal(Vec4 v, Vec4 w) {
     return v.x == w.x && v.y == w.y && v.z == w.z && v.w == w.w;
 }
 
-static f32 vec4_dot_product(Vec4 v, Vec4 w) {
+static f32 vec4_dot(Vec4 v, Vec4 w) {
     return v.x * w.x + v.y * w.y + v.z * w.z + v.w * w.w;
 }
 
-static f32 vec4_magnitude(Vec4 v) {
+static f32 vec4_len(Vec4 v) {
     return f32_sqrt(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
 }
 
 // --- Mat2 ---
 
-static Mat2 mat2_multiply(Mat2 m, Mat2 n) {
+static Mat2 mat2_mult(Mat2 m, Mat2 n) {
     return (Mat2){
         .m00 = m.m00 * n.m00 + m.m01 * n.m10, .m01 = m.m00 * n.m01 + m.m01 * n.m11,
         .m10 = m.m10 * n.m00 + m.m11 * n.m10, .m11 = m.m10 * n.m01 + m.m11 * n.m11,
@@ -249,7 +263,7 @@ static Mat2 mat2_transpose(Mat2 m) {
     };
 }
 
-static Vec2 mat2_vec2_multiply(Mat2 m, Vec2 v) {
+static Vec2 mat2_vec2_mult(Mat2 m, Vec2 v) {
     return (Vec2){
         .x = m.m00 * v.x + m.m01 * v.y,
         .y = m.m10 * v.x + m.m11 * v.y,
@@ -262,7 +276,7 @@ static f32 mat2_determinant(Mat2 m) {
 
 // --- Mat3 ---
 
-static Mat3 mat3_multiply(Mat3 m, Mat3 n) {
+static Mat3 mat3_mult(Mat3 m, Mat3 n) {
     return (Mat3){
         .m00 = m.m00 * n.m00 + m.m01 * n.m10 + m.m02 * n.m20, .m01 = m.m00 * n.m01 + m.m01 * n.m11 + m.m02 * n.m21, .m02 = m.m00 * n.m02 + m.m01 * n.m12 + m.m02 * n.m22,
         .m10 = m.m10 * n.m00 + m.m11 * n.m10 + m.m12 * n.m20, .m11 = m.m10 * n.m01 + m.m11 * n.m11 + m.m12 * n.m21, .m12 = m.m10 * n.m02 + m.m11 * n.m12 + m.m12 * n.m22,
@@ -278,7 +292,7 @@ static Mat3 mat3_transpose(Mat3 m) {
     };
 }
 
-static Vec3 mat3_vec3_multiply(Mat3 m, Vec3 v) {
+static Vec3 mat3_vec3_mult(Mat3 m, Vec3 v) {
     return (Vec3){
         .x = m.m00 * v.x + m.m01 * v.y + m.m02 * v.z,
         .y = m.m10 * v.x + m.m11 * v.y + m.m12 * v.z,
@@ -288,7 +302,7 @@ static Vec3 mat3_vec3_multiply(Mat3 m, Vec3 v) {
 
 // --- Mat4 ---
 
-static Mat4 mat4_multiply(Mat4 m, Mat4 n) {
+static Mat4 mat4_mult(Mat4 m, Mat4 n) {
     return (Mat4){
         .m00 = m.m00 * n.m00 + m.m01 * n.m10 + m.m02 * n.m20 + m.m03 * n.m30, .m01 = m.m00 * n.m01 + m.m01 * n.m11 + m.m02 * n.m21 + m.m03 * n.m31, .m02 = m.m00 * n.m02 + m.m01 * n.m12 + m.m02 * n.m22 + m.m03 * n.m32, .m03 = m.m00 * n.m03 + m.m01 * n.m13 + m.m02 * n.m23 + m.m03 * n.m33,
         .m10 = m.m10 * n.m00 + m.m11 * n.m10 + m.m12 * n.m20 + m.m13 * n.m30, .m11 = m.m10 * n.m01 + m.m11 * n.m11 + m.m12 * n.m21 + m.m13 * n.m31, .m12 = m.m10 * n.m02 + m.m11 * n.m12 + m.m12 * n.m22 + m.m13 * n.m32, .m13 = m.m10 * n.m03 + m.m11 * n.m13 + m.m12 * n.m23 + m.m13 * n.m33,
@@ -306,7 +320,7 @@ static Mat4 mat4_transpose(Mat4 m) {
     };
 }
 
-static Vec4 mat4_vec4_multiply(Mat4 m, Vec4 v) {
+static Vec4 mat4_vec4_mult(Mat4 m, Vec4 v) {
     return (Vec4){
         .x = m.m00 * v.x + m.m01 * v.y + m.m02 * v.z + m.m03 * v.w,
         .y = m.m10 * v.x + m.m11 * v.y + m.m12 * v.z + m.m13 * v.w,
@@ -318,7 +332,7 @@ static Vec4 mat4_vec4_multiply(Mat4 m, Vec4 v) {
 // --- Quat ---
 
 static Mat4 quat_to_rotation_mat4(Quat q) {
-    f32 magnitude = quat_magnitude(q);
+    f32 magnitude = quat_len(q);
     f32 s = 1.0f / (magnitude * magnitude) ;
     return (Mat4){
         .m00 = 1.0f - 2.0f * s * (q.y * q.y + q.z * q.z),  .m01 = 2.0f * s * (q.x * q.y - q.z * q.w),        .m02 = 2.0f * s * (q.x * q.z + q.y * q.w),
@@ -346,10 +360,10 @@ static Quat quat_from_axis_angle(f32 angle, Vec3 axis) {
     q.x = f32_sin(angle / 2.0f)*f32_cos(beta_x);
     q.y = f32_sin(angle / 2.0f)*f32_cos(beta_y);
     q.z = f32_sin(angle / 2.0f)*f32_cos(beta_z);
-    return quat_normalize(q);
+    return quat_norm(q);
 }
 
-static Quat quat_multiply(Quat q, Quat r) {
+static Quat quat_mult(Quat q, Quat r) {
     return (Quat){
         .w = q.w * r.w - q.x * r.x - q.y * r.y - q.z * r.z,
         .x = q.w * r.x + q.x * r.w + q.y * r.z - q.z * r.y,
@@ -358,8 +372,8 @@ static Quat quat_multiply(Quat q, Quat r) {
     };
 }
 
-static Quat quat_normalize(Quat q) {
-    f32 magnitude = quat_magnitude(q);
+static Quat quat_norm(Quat q) {
+    f32 magnitude = quat_len(q);
     return (Quat){
         .w = q.w / magnitude,
         .x = q.x / magnitude,
@@ -368,6 +382,6 @@ static Quat quat_normalize(Quat q) {
     };
 }
 
-static f32 quat_magnitude(Quat q) {
+static f32 quat_len(Quat q) {
         return f32_sqrt(q.a * q.a + q.b * q.b + q.c * q.c + q.d * q.d);
 }
