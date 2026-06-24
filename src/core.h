@@ -42,22 +42,30 @@ typedef int32_t ExitStatus;
 #define COMPILER_UNKNOWN 1
 #endif
 
-#define swap(type, x, y) do { type _temp_ = (x); (x) = (y); (y) = _temp_; } while(0)
-#define min(A,B) (((A)<(B))?(A):(B))
-#define max(A,B) (((A)>(B))?(A):(B))
-#define align_pow2(x,b) (((x) + (b) - 1)&(~((b) - 1)))
-#define align_down_pow2(x,b) ((x)&(~((b) - 1)))
-#define align_pad_pow2(x,b)  ((0-(x)) & ((b) - 1))
-#define is_pow2(x) ((x)!=0 && ((x)&((x)-1))==0)
+#define swap(type, x, y)                                                       \
+  do {                                                                         \
+    type _temp_ = (x);                                                         \
+    (x) = (y);                                                                 \
+    (y) = _temp_;                                                              \
+  } while (0)
+#define min(A, B) (((A) < (B)) ? (A) : (B))
+#define max(A, B) (((A) > (B)) ? (A) : (B))
+#define align_pow2(x, b) (((x) + (b) - 1) & (~((b) - 1)))
+#define align_down_pow2(x, b) ((x) & (~((b) - 1)))
+#define align_pad_pow2(x, b) ((0 - (x)) & ((b) - 1))
+#define is_pow2(x) ((x) != 0 && ((x) & ((x) - 1)) == 0)
 
-#define runtime_assert(cond) do { assert((cond)); } while(0)
+#define runtime_assert(cond)                                                   \
+  do {                                                                         \
+    assert((cond));                                                            \
+  } while (0)
 
 #if COMPILER_MSVC
-# define align_of(T) __alignof(T)
+#define align_of(T) __alignof(T)
 #elif COMPILER_CLANG
-# define align_of(T) __alignof(T)
+#define align_of(T) __alignof(T)
 #elif COMPILER_GCC
-# define align_of(T) __alignof__(T)
+#define align_of(T) __alignof__(T)
 #endif
 
 static void mem_set(void *dest, u8 byte, u64 size);
@@ -68,20 +76,21 @@ static i32 rng_generate_i32(void);
 static f32 rng_generate_01(void);
 
 typedef struct ScratchFrame ScratchFrame;
-struct ScratchFrame{
-    ScratchFrame *prev;
-    void *frame_base;
+struct ScratchFrame {
+  ScratchFrame *prev;
+  void *frame_base;
 };
 
 typedef struct {
-    void *memory_region_start;
-    u64 bytes_allocated;
-    u64 bytes_reserved;
-    u64 bytes_committed;
-    ScratchFrame *current_scratch_frame;
+  void *memory_region_start;
+  u64 bytes_allocated;
+  u64 bytes_reserved;
+  u64 bytes_committed;
+  ScratchFrame *current_scratch_frame;
 } Arena;
 
-// #define use_scratch(arena)  for (Arena *scratch = get_scratch(arena), *_once = (Arena *)1; _once; _once = NULL, free_scratch(scratch))
+// #define use_scratch(arena)  for (Arena *scratch = get_scratch(arena), *_once
+// = (Arena *)1; _once; _once = NULL, free_scratch(scratch))
 static Arena *get_scratch(Arena *conflict);
 static void free_scratch(Arena *scratch);
 
@@ -90,19 +99,21 @@ static void arena_clear(Arena *arena);
 static void arena_destroy(Arena *arena);
 static void arena_pop(Arena *arena, u64 size);
 
-#define arena_push_struct(arena, typename) arena_push((arena), sizeof(typename), align_of(typename))
-#define arena_push_array(arena, typename, count) arena_push((arena), sizeof(typename) * (count), align_of(typename))
+#define arena_push_struct(arena, typename)                                     \
+  arena_push((arena), sizeof(typename), align_of(typename))
+#define arena_push_array(arena, typename, count)                               \
+  arena_push((arena), sizeof(typename) * (count), align_of(typename))
 
 typedef struct {
-    u8 *data;
-    u64 len;
+  u8 *data;
+  u64 len;
 } Str8;
 
 typedef struct Str8Node Str8Node;
 struct Str8Node {
-    Str8Node *prev;
-    Str8Node *next;
-    Str8 str;
+  Str8Node *prev;
+  Str8Node *next;
+  Str8 str;
 };
 
 #define ws_delims s(" \n\r\t\v\f")
