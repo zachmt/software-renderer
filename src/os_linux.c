@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <time.h>
 
 u64 os_get_pagesize(void) {
   return (u64)sysconf(_SC_PAGESIZE);
@@ -58,3 +59,10 @@ Str8 os_read_entire_file(Arena *arena, Str8 file_path) {
   free_scratch(scratch);
   return res;
 }
+
+u64 os_get_usec(void) {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (u64)ts.tv_sec * 1000000ull + (u64)ts.tv_nsec / 1000ull;
+}
+

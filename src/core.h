@@ -42,6 +42,12 @@ typedef int32_t ExitStatus;
 #define COMPILER_UNKNOWN 1
 #endif
 
+#if defined(__x86_64__) || defined(_M_X64)
+#define ARCH_X64 1
+#else
+#define ARCH_UNKNOWN 1
+#endif
+
 #define swap(type, x, y)                                                       \
   do {                                                                         \
     type _temp_ = (x);                                                         \

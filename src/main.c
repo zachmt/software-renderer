@@ -1,3 +1,4 @@
+#include "os.h"
 #define _DEFAULT_SOURCE // fixes madvise not being defined due to RGFW
 #define RGFW_IMPLEMENTATION
 #include "RGFW.h"
@@ -64,9 +65,8 @@ int main(void) {
                          (i32)state->window_height, RGFW_formatRGBA8);
   runtime_assert(depth_surface != NULL);
 
-  f32 dt = 0.0f;
-  struct timespec start, end;
-  bool32 first_frame = true;
+  u64 start_usec = os_get_usec();
+  u64 end_usec = os_get_usec();
 
   while (RGFW_window_shouldClose(window) == RGFW_FALSE) {
     RGFW_pollEvents();
@@ -127,14 +127,9 @@ int main(void) {
     i32 w, h;
     RGFW_window_getSize(window, (i32 *)&w, (i32 *)&h);
 
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    if (!first_frame) {
-      i64 s = end.tv_sec - start.tv_sec;
-      i64 ns = end.tv_nsec - start.tv_nsec;
-      dt = (f32)s + 0.000000001f * (f32)ns;
-    }
-    first_frame = false;
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    end_usec = os_get_usec();
+    f32 dt = ((f32)(end_usec - start_usec)) / 1000000.0f;
+    start_usec = os_get_usec();
     update_and_render(state, dt);
     RGFW_window_blitSurface(window, surface);
   }

@@ -3,8 +3,8 @@
 #include "maths.h"
 
 #include <stdio.h>
-#include <time.h>
 
+#include "os.h"
 #include "stb_easy_font.h"
 
 static ColorRGBA red = {.r = 255, .g = 0, .b = 0, .a = 255};
@@ -44,6 +44,7 @@ static void reset_depth_buffer(RenderState *state) {
 }
 
 static void draw_pixel(RenderState *state, i32 x, i32 y, ColorRGBA color) {
+  runtime_assert(x >= 0 && x < (i32)state->window_width && y >= 0 && y < (i32)state->window_height);
   if (x >= 0 && x < (i32)state->window_width && y >= 0 &&
       y < (i32)state->window_height) {
     u32 i = ((u32)y * state->window_width + (u32)x);
@@ -459,17 +460,14 @@ static void update_and_render(RenderState *state, f32 dt) {
                  state->frame_buffer_len);
   update_camera(state, dt);
 
-  struct timespec start, end;
-  clock_gettime(CLOCK_MONOTONIC, &start);
+  u64 start = os_get_usec();
   clear_frame_buffer(state, black);
   reset_depth_buffer(state);
   // draw_object(state, *state->obj);
   render_object_new(state, state->obj[0]);
-  clock_gettime(CLOCK_MONOTONIC, &end);
+  u64 end = os_get_usec();
 
-  i64 secs = end.tv_sec - start.tv_sec;
-  i64 nanos = end.tv_nsec - start.tv_nsec;
-  f64 ms = (f64)secs * 1000.0 + 0.000001 * (f64)nanos;
+  f32 ms = (f32)(end - start) / 1000.0f;
 
   char debug_text[1000] = {0};
   snprintf(
@@ -478,6 +476,6 @@ static void update_and_render(RenderState *state, f32 dt) {
       (f64)dt, (f64)state->camera.position.x, (f64)state->camera.position.y,
       (f64)state->camera.position.z, (f64)state->camera.rotation.w,
       (f64)state->camera.rotation.x, (f64)state->camera.rotation.y,
-      (f64)state->camera.rotation.z, ms);
+      (f64)state->camera.rotation.z, (f64)ms);
   render_2d_text(state, vec2_zero, s(debug_text));
 }
