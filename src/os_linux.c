@@ -7,11 +7,11 @@
 #include <unistd.h>
 #include <time.h>
 
-u64 os_get_pagesize(void) {
+static u64 os_get_pagesize(void) {
   return (u64)sysconf(_SC_PAGESIZE);
 }
 
-void *os_mem_reserve(u64 size) {
+static void *os_mem_reserve(u64 size) {
   runtime_assert(size > 0);
   void *buffer =
       mmap(NULL, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -20,13 +20,13 @@ void *os_mem_reserve(u64 size) {
   return buffer;
 }
 
-void os_mem_commit(void *base, u64 size) {
+static void os_mem_commit(void *base, u64 size) {
   runtime_assert((u64)base % os_get_pagesize() == 0);
   i32 res = mprotect(base, size, PROT_READ | PROT_WRITE);
   runtime_assert(res == 0);
 }
 
-void os_mem_decommit(void *base, u64 size) {
+static void os_mem_decommit(void *base, u64 size) {
   runtime_assert((u64)base % os_get_pagesize() == 0);
   i32 res = madvise(base, size, MADV_DONTNEED);
   runtime_assert(res == 0);
@@ -34,12 +34,12 @@ void os_mem_decommit(void *base, u64 size) {
   runtime_assert(res == 0);
 }
 
-void os_mem_free(void *base, u64 size) {
+static void os_mem_free(void *base, u64 size) {
   i32 res = munmap(base, size);
   runtime_assert(res == 0);
 }
 
-Str8 os_read_entire_file(Arena *arena, Str8 file_path) {
+static Str8 os_read_entire_file(Arena *arena, Str8 file_path) {
   Str8 res = {0};
   Arena *scratch = get_scratch(arena);
   i32 fd = open(cstr(scratch, file_path), O_RDONLY);
@@ -60,7 +60,7 @@ Str8 os_read_entire_file(Arena *arena, Str8 file_path) {
   return res;
 }
 
-u64 os_get_usec(void) {
+static u64 os_get_usec(void) {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return (u64)ts.tv_sec * 1000000ull + (u64)ts.tv_nsec / 1000ull;
